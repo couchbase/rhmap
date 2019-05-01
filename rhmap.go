@@ -79,6 +79,7 @@ func (m *RHMap) Reset() {
 	m.CopyBuf = m.CopyBuf[:0]
 }
 
+// Get retrieves the val for a given key.
 func (m *RHMap) Get(k Key) (v Val, found bool) {
 	if k == nil {
 		return nil, false
@@ -109,6 +110,7 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 	}
 }
 
+// Set inserts or updates a key/val into the RHMap.
 func (m *RHMap) Set(k Key, v Val) error {
 	if k == nil {
 		return ErrNilKey
