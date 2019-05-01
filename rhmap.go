@@ -70,7 +70,7 @@ func NewRHMap(size int) *RHMap {
 	}
 }
 
-// Reset clears the RHMap (but will reuse underlying slices).
+// Reset clears RHMap, where already allocated memory will be reused.
 func (m *RHMap) Reset() {
 	for i := range m.Items {
 		m.Items[i] = Item{}
@@ -85,21 +85,21 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 		return nil, false
 	}
 
-	h := m.HashFunc(k)
 	num := len(m.Items)
-	idx := int(h % uint32(num))
+	idx := int(m.HashFunc(k) % uint32(num))
 	idxStart := idx
 
 	for {
 		e := &m.Items[idx]
-		if bytes.Equal(e.Key, k) {
-			return e.Val, true
-		}
 		if e.Key == nil {
 			return nil, false
 		}
 
-		idx = idx + 1
+		if bytes.Equal(e.Key, k) {
+			return e.Val, true
+		}
+
+		idx++
 		if idx >= num {
 			idx = 0
 		}
@@ -110,46 +110,48 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 	}
 }
 
-// Set inserts or updates a key/val into the RHMap.
-func (m *RHMap) Set(k Key, v Val) error {
+// Set inserts or updates a key/val into the RHMap.  The returned
+// wasInserted will be true if the mutation was a newly seen, inserted
+// key and false if the mutation was an update to an existing key.
+func (m *RHMap) Set(k Key, v Val) (wasInserted bool, err error) {
 	if k == nil {
-		return ErrNilKey
+		return false, ErrNilKey
 	}
 
-	h := m.HashFunc(k)
 	num := len(m.Items)
-	idx := int(h % uint32(num))
+	idx := int(m.HashFunc(k) % uint32(num))
 	idxStart := idx
 
 	k, v = m.PrepareKeyVal(k, v)
-	e := Item{k, v, 0}
+	incoming := Item{k, v, 0}
 
 	for {
-		if m.Items[idx].Key == nil {
-			m.Items[idx] = e
+		e := &m.Items[idx]
+		if e.Key == nil {
+			m.Items[idx] = incoming
 			m.Count += 1
-			return nil
+			return true, nil
 		}
 
-		if bytes.Equal(m.Items[idx].Key, k) {
-			m.Items[idx] = e
-			return nil
+		if bytes.Equal(e.Key, k) {
+			m.Items[idx] = incoming
+			return false, nil
 		}
 
-		// Swap if existing item is "richer" (closer to its best idx).
-		if m.Items[idx].Distance < e.Distance {
-			e, m.Items[idx] = m.Items[idx], e
+		// Swap if the incoming item is further from its best idx.
+		if e.Distance < incoming.Distance {
+			incoming, m.Items[idx] = m.Items[idx], incoming
 		}
 
-		e.Distance += 1 // One step further away from best idx.
+		incoming.Distance += 1 // One step further away from best idx.
 
-		idx = idx + 1
+		idx++
 		if idx >= num {
 			idx = 0
 		}
 
-		// Grow if big distances or we went all the way around.
-		if e.Distance > m.MaxDistance || idx == idxStart {
+		// Grow if distances become big or we went all the way around.
+		if incoming.Distance > m.MaxDistance || idx == idxStart {
 			grow := NewRHMap(int(float64(num) * m.Growth(m)))
 			grow.HashFunc = m.HashFunc
 			grow.MaxDistance = m.MaxDistance
@@ -160,7 +162,84 @@ func (m *RHMap) Set(k Key, v Val) error {
 
 			*m = *grow
 
-			return m.Set(e.Key, e.Val)
+			return m.Set(incoming.Key, incoming.Val)
+		}
+	}
+}
+
+// Del removes a key/val from the RHMap.  The previous val, if it
+// existed, is returned.
+func (m *RHMap) Del(k Key) (previous Val, existed bool) {
+	if k == nil {
+		return nil, false
+	}
+
+	num := len(m.Items)
+	idx := int(m.HashFunc(k) % uint32(num))
+	idxStart := idx
+
+	for {
+		e := &m.Items[idx]
+		if e.Key == nil {
+			return nil, false
+		}
+
+		if bytes.Equal(e.Key, k) {
+			previous = e.Val
+			break // Found the item.
+		}
+
+		idx++
+		if idx >= num {
+			idx = 0
+		}
+
+		if idx == idxStart {
+			return nil, false
+		}
+	}
+
+	// Left-shift succeeding items in the linear chain.
+	for {
+		next := idx + 1
+		if next >= num {
+			next = 0
+		}
+
+		if next == idx { // Went all the way around.
+			break
+		}
+
+		f := &m.Items[next]
+		if f.Key == nil || f.Distance <= 0 {
+			break
+		}
+
+		m.Items[idx] = *f
+
+		idx = next
+	}
+
+	m.Items[idx] = Item{}
+	m.Count--
+
+	return previous, true
+}
+
+// CopyTo copies key/val's to the dst.
+func (m *RHMap) CopyTo(dst *RHMap) {
+	m.Visit(func(k Key, v Val) bool { dst.Set(k, v); return true })
+}
+
+// Visit invokes the callback on key/val.  The callback can return
+// false to exit the visitation early.
+func (m *RHMap) Visit(callback func(k Key, v Val) (keepGoing bool)) {
+	for i := range m.Items {
+		e := &m.Items[i]
+		if e.Key != nil {
+			if !callback(e.Key, e.Val) {
+				return
+			}
 		}
 	}
 }
@@ -179,19 +258,4 @@ func (m *RHMap) PrepareKeyVal(k Key, v Val) (Key, Val) {
 	}
 
 	return k, v
-}
-
-func (m *RHMap) CopyTo(dst *RHMap) {
-	m.Visit(func(k Key, v Val) bool { dst.Set(k, v); return true })
-}
-
-func (m *RHMap) Visit(cb func(k Key, v Val) (keepGoing bool)) {
-	for i := range m.Items {
-		e := &m.Items[i]
-		if e.Key != nil {
-			if !cb(e.Key, e.Val) {
-				return
-			}
-		}
-	}
 }
