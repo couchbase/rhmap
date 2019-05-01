@@ -215,6 +215,8 @@ func (m *RHMap) Del(k Key) (previous Val, existed bool) {
 			break
 		}
 
+		f.Distance--
+
 		m.Items[idx] = *f
 
 		idx = next
