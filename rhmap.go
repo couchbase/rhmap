@@ -258,7 +258,7 @@ func (m *RHMap) Visit(callback func(k Key, v Val) (keepGoing bool)) {
 
 // PrepareKeyVal returns a potentially copied key/val, which is used
 // during mutations.
-func (m *RHMap) PrepareKeyVal(k Key, v Val) (Key, Val) {
+func (m *RHMap) PrepareKeyVal(k Key, v Val) (outk Key, outv Val) {
 	if m.Copy {
 		var n int
 
