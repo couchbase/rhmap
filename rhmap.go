@@ -43,7 +43,7 @@ type RHMap struct {
 	MaxDistance int
 
 	// Overridable func to calculate a size multiplier when resizing
-	// for growth is needed. Defaults to constant 2.0.
+	// for growth is needed. Default returns a constant 2.0.
 	Growth func(*RHMap) float64
 }
 
