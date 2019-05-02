@@ -1,8 +1,10 @@
 # rhmap - a robin-hood hashmap in golang
 
+In other words: `map[[]byte][]byte`
+
 ## Example
 ```
-    var size = SomePrimeNumber
+    var size = 128 // Or, use a prime number.
 
     m := rhmap.NewRHMap(size)
 
@@ -18,15 +20,27 @@
     // previous == []byte("world")
 ```
 
-## Advanced features
+## Other features
 
-* Grows automatically when linear probe distances grow bigger than the
-  MaxDistance configuration.
-* Recycle the RHMap for reuse via the Reset() method, which
-  reuses already allocated memory structures.
-* Ability to copy incoming Key & Val bytes.  See the Copy flag.
-* Overridable the hashing function.
+* Visit() method with key-val callback.
+* CopyTo(anotherRHMap) method.
+* Overridable hash function.
 * Overridable growth multiplier function.
+* Automatic growth when linear probe distances become larger than the
+  MaxDistance configuration.
+* Ability to copy incoming Key & Val bytes -- see the Copy flag.
+* Reset() method allows an RHMap to be efficiently cleared, and
+  underlying, already allocated memory will be recycled for reuse,
+  which can reuse garbage for some applications.
+
+## Motivations
+
+The RHMap was intended for a use case where many application data
+items needed to be processed, where the processing of a single data
+item needed its own temporary hashmap instance.  The standard golang
+hashmap did not support []byte keys, so conversions from []byte
+to-and-from strings (i.e., we were using `map[string][]byte`) was
+creating garbage.
 
 ## License
 
