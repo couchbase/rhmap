@@ -15,20 +15,26 @@ In other words: `map[[]byte][]byte`
     // ok == true
     // v == []byte("world")
 
-    previous, existed := m.Del([]byte("hi")
+    previous, existed := m.Del([]byte("hi"))
     // existed == true
     // previous == []byte("world")
 ```
 
 ## Some features
 
-* Visit() method with key-val callback.
-* CopyTo(anotherRHMap) method.
-* Overridable hash function.
-* Overridable growth multiplier function.
-* Automatic growth when linear probe distances become larger than the
-  MaxDistance configuration.
-* Ability to copy incoming Key & Val bytes -- see the Copy flag.
+* `Key` and `Val` types are `[]byte`
+* `Get()`, `Set()`, and `Del()` methods.
+* `Visit()` method with key-val callback.
+* `CopyTo(anotherRHMap)` method.
+* Overridable hash function -- see the `HashFunc` field.
+* Overridable growth multiplier function -- see the `Growth` field.
+* Automatic growth when linear probe distances become larger than a
+  configured maximum distance -- see the `MaxDistance` field.
+* Ability to copy incoming `Key` & `Val` bytes -- see the `Copy` flag.
+* All fields are public for advanced user tweaking.
+* An RHMap is not concurrent safe -- please use your own favorite
+  outside sync approaches.
+* Unit tests.
 * Reset() method allows an RHMap to be efficiently cleared, and the
   underlying, already allocated memory will be recycled for reuse,
   which can reduce garbage memory pressure for some applications.
