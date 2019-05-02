@@ -45,6 +45,9 @@ type RHMap struct {
 	// Overridable func to calculate a size multiplier when resizing
 	// for growth is needed. Default returns a constant 2.0.
 	Growth func(*RHMap) float64
+
+	// Overridable func to grow the RHMap.
+	Grow func(m *RHMap, newSize int)
 }
 
 // Item represents an entry in the RHMap.
@@ -69,8 +72,8 @@ func NewRHMap(size int) *RHMap {
 		},
 
 		MaxDistance: 10,
-
-		Growth: func(m *RHMap) float64 { return 2.0 },
+		Growth:      func(m *RHMap) float64 { return 2.0 },
+		Grow:        Grow,
 	}
 }
 
@@ -156,14 +159,7 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 
 		// Grow if distances become big or we went all the way around.
 		if incoming.Distance > m.MaxDistance || idx == idxStart {
-			grow := NewRHMap(int(float64(num) * m.Growth(m)))
-			grow.HashFunc = m.HashFunc
-			grow.MaxDistance = m.MaxDistance
-			grow.Growth = m.Growth
-
-			m.CopyTo(grow)
-
-			*m = *grow
+			m.Grow(m, int(float64(num)*m.Growth(m)))
 
 			return m.Set(incoming.Key, incoming.Val)
 		}
@@ -247,4 +243,17 @@ func (m *RHMap) Visit(callback func(k Key, v Val) (keepGoing bool)) {
 			}
 		}
 	}
+}
+
+// Grow is the default implementation to grow a RHMap.
+func Grow(m *RHMap, newSize int) {
+	grow := NewRHMap(newSize)
+	grow.HashFunc = m.HashFunc
+	grow.MaxDistance = m.MaxDistance
+	grow.Growth = m.Growth
+	grow.Grow = m.Grow
+
+	m.CopyTo(grow)
+
+	*m = *grow
 }
