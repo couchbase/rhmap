@@ -1,6 +1,6 @@
 # rhmap - a robin-hood hashmap in golang
 
-In other words: `map[[]byte][]byte`
+In other words: `map[[]byte][]byte` or `map[[]byte]SomeOtherType`
 
 [![GoDoc](https://godoc.org/github.com/couchbase/rhmap?status.svg)](https://godoc.org/github.com/couchbase/rhmap)
 
