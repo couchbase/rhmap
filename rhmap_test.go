@@ -13,37 +13,36 @@ package rhmap
 
 import (
 	"bytes"
-	"fmt"
 	"reflect"
 	"testing"
 )
 
 func TestSize1(t *testing.T) {
 	r := NewRHMap(1)
-	test(t, r, true)
+	test(t, r, true, nil)
 	r.Reset()
-	test(t, r, true)
+	test(t, r, true, nil)
 }
 
 func TestSize2(t *testing.T) {
 	r := NewRHMap(2)
-	test(t, r, true)
+	test(t, r, true, nil)
 	r.Reset()
-	test(t, r, true)
+	test(t, r, true, nil)
 }
 
 func TestSize10(t *testing.T) {
 	r := NewRHMap(10)
-	test(t, r, true)
+	test(t, r, true, nil)
 	r.Reset()
-	test(t, r, true)
+	test(t, r, true, nil)
 }
 
 func TestSize18NonGrowing(t *testing.T) {
 	r := NewRHMap(18)
 	r.MaxDistance = 100000
 
-	test(t, r, false)
+	test(t, r, false, nil)
 	if r.Count != 18 {
 		t.Fatalf("wrong size")
 	}
@@ -56,8 +55,44 @@ func TestSize18NonGrowing(t *testing.T) {
 		t.Fatalf("expected empty after Reset()")
 	}
 
-	test(t, r, false)
-	if r.Count != 18 {
+	test(t, r, false, func(
+		g map[string][]byte,
+		get func(k string),
+		set func(k, v string),
+		del func(k string)) {
+		// At this point, r.Items looks like...
+		//			{
+		// [{Key:[102 49 49] Val:[70 49 49] Distance:1}
+		//  {Key:[97 49 49] Val:[65 49 49] Distance:1}
+		//  {Key:[100] Val:[68] Distance:1}
+		//  {Key:[101 49 49] Val:[69 49 49] Distance:1}
+		//  {Key:[101] Val:[69] Distance:2}
+		//  {Key:[100 49 49] Val:[68 49 49] Distance:2}
+		//  {Key:[102 49] Val:[70 49] Distance:2}
+		//  {Key:[99 49 49] Val:[67 49 49] Distance:3}
+		//  {Key:[98 49 49] Val:[66 49 49] Distance:3}
+		//  {Key:[100 49] Val:[68 49] Distance:3}
+		//  {Key:[98 49] Val:[66 49] Distance:4}
+		//  {Key:[99 49] Val:[67 49] Distance:0}
+		//  {Key:[101 49] Val:[69 49] Distance:1}
+		//  {Key:[98] Val:[66] Distance:0}
+		//  {Key:[97 49] Val:[65 49] Distance:1}
+		//  {Key:[99] Val:[67] Distance:1}
+		//  {Key:[97] Val:[65] Distance:0}
+		//  {Key:[102] Val:[70] Distance:0}]
+
+		if string(r.Items[0].Key) != "f11" {
+			t.Errorf("expected 0th key to be f11")
+		}
+		if string(r.Items[1].Key) != "a11" {
+			t.Errorf("expected 1th key to be a11")
+		}
+
+		// Deleting f11 causes a bunch of left-shift's.
+		del("f11")
+	})
+
+	if r.Count != 17 {
 		t.Fatalf("wrong size")
 	}
 	if len(r.Items) != 18 {
@@ -65,7 +100,14 @@ func TestSize18NonGrowing(t *testing.T) {
 	}
 }
 
-func test(t *testing.T, r *RHMap, checkCopyToEnabled bool) {
+type andThen func(
+	g map[string][]byte,
+	get func(k string),
+	set func(k, v string),
+	del func(k string))
+
+func test(t *testing.T, r *RHMap,
+	checkCopyToEnabled bool, andThen andThen) {
 	ops := 0
 
 	g := map[string][]byte{}
@@ -225,4 +267,8 @@ func test(t *testing.T, r *RHMap, checkCopyToEnabled bool) {
 
 	get("not a key")
 	get("nothing there")
+
+	if andThen != nil {
+		andThen(g, get, set, del)
+	}
 }
