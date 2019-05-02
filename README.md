@@ -3,7 +3,7 @@
 In other words: `map[[]byte][]byte`
 
 ## Example
-```
+```go
     var size = 97 // Ideally, some prime number.
 
     m := rhmap.NewRHMap(size)
