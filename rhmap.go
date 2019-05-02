@@ -45,9 +45,6 @@ type RHMap struct {
 	// Overridable func to calculate a size multiplier when resizing
 	// for growth is needed. Defaults to constant 2.0.
 	Growth func(*RHMap) float64
-
-	Copy    bool   // When true, RHMap copies incoming key/val's.
-	CopyBuf []byte // append()'ed when copying incoming key/vals'.
 }
 
 // Item represents an entry in the RHMap.
@@ -82,8 +79,6 @@ func (m *RHMap) Reset() {
 	for i := range m.Items {
 		m.Items[i] = Item{}
 	}
-
-	m.CopyBuf = m.CopyBuf[:0]
 
 	m.Count = 0
 }
@@ -132,7 +127,6 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 	idx := int(m.HashFunc(k) % uint32(num))
 	idxStart := idx
 
-	k, v = m.PrepareKeyVal(k, v)
 	incoming := Item{k, v, 0}
 
 	for {
@@ -166,7 +160,6 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 			grow.HashFunc = m.HashFunc
 			grow.MaxDistance = m.MaxDistance
 			grow.Growth = m.Growth
-			grow.Copy = m.Copy
 
 			m.CopyTo(grow)
 
@@ -254,22 +247,4 @@ func (m *RHMap) Visit(callback func(k Key, v Val) (keepGoing bool)) {
 			}
 		}
 	}
-}
-
-// PrepareKeyVal returns a potentially copied key/val, which is used
-// during mutations.
-func (m *RHMap) PrepareKeyVal(k Key, v Val) (outk Key, outv Val) {
-	if m.Copy {
-		var n int
-
-		n = len(m.CopyBuf)
-		m.CopyBuf = append(m.CopyBuf, k...)
-		k = m.CopyBuf[n:]
-
-		n = len(m.CopyBuf)
-		m.CopyBuf = append(m.CopyBuf, v...)
-		v = m.CopyBuf[n:]
-	}
-
-	return k, v
 }

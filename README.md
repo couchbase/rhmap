@@ -32,7 +32,6 @@ In other words: `map[[]byte][]byte`
 * Overridable growth multiplier function -- see the `Growth` field.
 * Automatic growth when linear probe distances become larger than a
   configured maximum distance -- see the `MaxDistance` field.
-* Ability to copy incoming `Key` & `Val` bytes -- see the `Copy` flag.
 * All fields are public for advanced user tweaking.
 * An RHMap is not concurrent safe -- please use your own favorite
   outside sync approaches.

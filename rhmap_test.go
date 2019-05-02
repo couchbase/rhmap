@@ -117,7 +117,6 @@ func test(t *testing.T, r *RHMap) {
 	checkCopyTo = func() {
 		r2 := NewRHMap(1)
 		r2.MaxDistance = 1
-		r2.Copy = true
 		r.CopyTo(r2)
 
 		g2 := map[string][]byte{}
