@@ -35,7 +35,7 @@ In other words: `map[[]byte][]byte`
 * All fields are public for advanced user tweaking.
 * An RHMap is not concurrent safe -- please use your own favorite
   outside sync approaches.
-* Unit tests.
+* Makefile shows how to codegen maps of different types using sed.
 * `Reset()` method allows an RHMap to be efficiently cleared, and the
   underlying, already allocated memory will be recycled for reuse,
   which can reduce garbage memory pressure for some applications.
