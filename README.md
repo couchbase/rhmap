@@ -37,7 +37,7 @@ In other words: `map[[]byte][]byte`
 * An RHMap is not concurrent safe -- please use your own favorite
   outside sync approaches.
 * Unit tests.
-* Reset() method allows an RHMap to be efficiently cleared, and the
+* `Reset()` method allows an RHMap to be efficiently cleared, and the
   underlying, already allocated memory will be recycled for reuse,
   which can reduce garbage memory pressure for some applications.
 
@@ -46,7 +46,7 @@ In other words: `map[[]byte][]byte`
 The RHMap was intended for a use case where many application data
 objects needed to be processed, where the processing of a single data
 object needed its own temporary hashmap instance.  The standard golang
-hashmap did not support []byte keys, so conversions from []byte
+hashmap did not support `[]byte` keys, so conversions from `[]byte`
 to-and-from strings (i.e., we were using `map[string][]byte`) was
 creating garbage.  Instead, we needed a (mythical)
 `map[[]byte][]byte`.
