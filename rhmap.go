@@ -20,10 +20,10 @@ import (
 // ErrNilKey means a key was nil.
 var ErrNilKey = errors.New("nil key")
 
-// Type for keys. A nil key is invalid.
+// Key is the type for a key. A nil key is invalid.
 type Key []byte
 
-// Type for vals. A nil val is valid.
+// Val is the type for a val. A nil val is valid.
 type Val []byte
 
 // RHMap is a robinhood hashmap. It is not concurrent safe.
