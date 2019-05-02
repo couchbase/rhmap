@@ -40,8 +40,8 @@ type RHMap struct {
 	// for growth is needed.  Defaults to constant 2.0.
 	Growth func(*RHMap) float64
 
-	Copy    bool // When true, RHMap copies incoming key/val's.
-	CopyBuf []byte
+	Copy    bool   // When true, RHMap copies incoming key/val's.
+	CopyBuf []byte // append()'ed when copying incoming key/vals'.
 }
 
 type Item struct {
@@ -248,6 +248,8 @@ func (m *RHMap) Visit(callback func(k Key, v Val) (keepGoing bool)) {
 	}
 }
 
+// PrepareKeyVal returns a potentially copied key/val, which is used
+// during mutations.
 func (m *RHMap) PrepareKeyVal(k Key, v Val) (Key, Val) {
 	if m.Copy {
 		var n int

@@ -2,6 +2,8 @@
 
 In other words: `map[[]byte][]byte`
 
+[![GoDoc](https://godoc.org/github.com/couchbase/rhmap?status.svg)](https://godoc.org/github.com/couchbase/rhmap)
+
 ## Example
 ```go
     var size = 97 // Ideally, some prime number.
