@@ -17,19 +17,23 @@ import (
 	"hash/fnv"
 )
 
+// ErrNilKey means a key was nil.
 var ErrNilKey = errors.New("nil key")
 
-type Key []byte // A nil key is invalid.
-type Val []byte // A nil val is valid.
+// Type for keys. A nil key is invalid.
+type Key []byte
 
-// RHMap is a robinhood hashmap.  It is not concurrent safe.
+// Type for vals. A nil val is valid.
+type Val []byte
+
+// RHMap is a robinhood hashmap. It is not concurrent safe.
 type RHMap struct {
 	Items []Item
 
 	// Number of keys in the RHMap.
 	Count int
 
-	// Overridable hash func.  Defaults to hash/fnv.New32a().
+	// Overridable hash func. Defaults to hash/fnv.New32a().
 	HashFunc func(Key) uint32
 
 	// When any item's distance gets too large, grow the RHMap.
@@ -37,13 +41,14 @@ type RHMap struct {
 	MaxDistance int
 
 	// Overridable func to calculate a size multiplier when resizing
-	// for growth is needed.  Defaults to constant 2.0.
+	// for growth is needed. Defaults to constant 2.0.
 	Growth func(*RHMap) float64
 
 	Copy    bool   // When true, RHMap copies incoming key/val's.
 	CopyBuf []byte // append()'ed when copying incoming key/vals'.
 }
 
+// Item represents an entry in the RHMap.
 type Item struct {
 	Key Key
 	Val Val
@@ -112,7 +117,7 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 	}
 }
 
-// Set inserts or updates a key/val into the RHMap.  The returned
+// Set inserts or updates a key/val into the RHMap. The returned
 // wasNew will be true if the mutation was a newly seen, inserted key
 // and false if the mutation was an update to an existing key.
 func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
@@ -131,7 +136,7 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 		e := &m.Items[idx]
 		if e.Key == nil {
 			m.Items[idx] = incoming
-			m.Count += 1
+			m.Count++
 			return true, nil
 		}
 
@@ -145,7 +150,7 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 			incoming, m.Items[idx] = m.Items[idx], incoming
 		}
 
-		incoming.Distance += 1 // One step further away from best idx.
+		incoming.Distance++ // One step further away from best idx.
 
 		idx++
 		if idx >= num {
@@ -169,7 +174,7 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 	}
 }
 
-// Del removes a key/val from the RHMap.  The previous val, if it
+// Del removes a key/val from the RHMap. The previous val, if it
 // existed, is returned.
 func (m *RHMap) Del(k Key) (previous Val, existed bool) {
 	if k == nil {
@@ -235,7 +240,7 @@ func (m *RHMap) CopyTo(dst *RHMap) {
 	m.Visit(func(k Key, v Val) bool { dst.Set(k, v); return true })
 }
 
-// Visit invokes the callback on key/val.  The callback can return
+// Visit invokes the callback on key/val. The callback can return
 // false to exit the visitation early.
 func (m *RHMap) Visit(callback func(k Key, v Val) (keepGoing bool)) {
 	for i := range m.Items {
