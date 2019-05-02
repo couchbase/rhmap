@@ -9,8 +9,8 @@
 //  express or implied. See the License for the specific language
 //  governing permissions and limitations under the License.
 
-// Package rhmap provides a robin-hood implementation of a hashmap for
-// golang. In other words, map[[]byte][]byte.
+// Package rhmap provides a map[[]byte][]byte based on the robin-hood
+// hashmap algorithm.
 package rhmap
 
 import (
@@ -120,8 +120,9 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 }
 
 // Set inserts or updates a key/val into the RHMap. The returned
-// wasNew will be true if the mutation was a newly seen, inserted key
-// and false if the mutation was an update to an existing key.
+// wasNew will be true if the mutation was on a newly seen, inserted
+// key, and wasNew will be false if the mutation was an update to an
+// existing key.
 func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 	if k == nil {
 		return false, ErrNilKey
