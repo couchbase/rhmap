@@ -179,7 +179,7 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 
 // Del removes a key/val from the RHMap. The previous val, if it
 // existed, is returned.
-func (m *RHMap) Del(k Key) (previous Val, existed bool) {
+func (m *RHMap) Del(k Key) (prev Val, existed bool) {
 	if k == nil {
 		return nil, false
 	}
@@ -195,7 +195,7 @@ func (m *RHMap) Del(k Key) (previous Val, existed bool) {
 		}
 
 		if bytes.Equal(e.Key, k) {
-			previous = e.Val
+			prev = e.Val
 			break // Found the item.
 		}
 
@@ -235,7 +235,7 @@ func (m *RHMap) Del(k Key) (previous Val, existed bool) {
 	m.Items[idx] = Item{}
 	m.Count--
 
-	return previous, true
+	return prev, true
 }
 
 // CopyTo copies key/val's to the dst.
