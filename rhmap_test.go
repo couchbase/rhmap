@@ -61,7 +61,7 @@ func TestSize18NonGrowing(t *testing.T) {
 		set func(k, v string),
 		del func(k string)) {
 		// At this point, r.Items looks like...
-		//			{
+		//
 		// [{Key:[102 49 49] Val:[70 49 49] Distance:1}
 		//  {Key:[97 49 49] Val:[65 49 49] Distance:1}
 		//  {Key:[100] Val:[68] Distance:1}
