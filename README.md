@@ -30,6 +30,7 @@ In other words: `map[[]byte][]byte` or `map[[]byte]SomeOtherType`
 * `CopyTo(anotherRHMap)` method.
 * Overridable hash function -- see the `HashFunc` field.
 * Overridable growth multiplier function -- see the `Growth` field.
+* Overridable grow function -- see the `Grow` field.
 * Automatic growth when linear probe distances become larger than a
   configured maximum distance -- see the `MaxDistance` field.
 * All fields are public for advanced user tweaking.
