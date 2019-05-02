@@ -77,6 +77,8 @@ func (m *RHMap) Reset() {
 	}
 
 	m.CopyBuf = m.CopyBuf[:0]
+
+	m.Count = 0
 }
 
 // Get retrieves the val for a given key.
