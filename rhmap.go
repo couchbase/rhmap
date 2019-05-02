@@ -86,7 +86,7 @@ func (m *RHMap) Reset() {
 // Get retrieves the val for a given key.
 func (m *RHMap) Get(k Key) (v Val, found bool) {
 	if k == nil {
-		return nil, false
+		return Val(nil), false
 	}
 
 	num := len(m.Items)
@@ -96,7 +96,7 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 	for {
 		e := &m.Items[idx]
 		if e.Key == nil {
-			return nil, false
+			return Val(nil), false
 		}
 
 		if bytes.Equal(e.Key, k) {
@@ -109,7 +109,7 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 		}
 
 		if idx == idxStart { // Went all the way around.
-			return nil, false
+			return Val(nil), false
 		}
 	}
 }
@@ -174,7 +174,7 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 // existed, is returned.
 func (m *RHMap) Del(k Key) (prev Val, existed bool) {
 	if k == nil {
-		return nil, false
+		return Val(nil), false
 	}
 
 	num := len(m.Items)
@@ -184,7 +184,7 @@ func (m *RHMap) Del(k Key) (prev Val, existed bool) {
 	for {
 		e := &m.Items[idx]
 		if e.Key == nil {
-			return nil, false
+			return Val(nil), false
 		}
 
 		if bytes.Equal(e.Key, k) {
@@ -198,7 +198,7 @@ func (m *RHMap) Del(k Key) (prev Val, existed bool) {
 		}
 
 		if idx == idxStart {
-			return nil, false
+			return Val(nil), false
 		}
 	}
 
