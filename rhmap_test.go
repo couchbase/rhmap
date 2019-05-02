@@ -22,6 +22,23 @@ func TestSize1(t *testing.T) {
 	test(t, r, true, nil)
 	r.Reset()
 	test(t, r, true, nil)
+
+	// -------------------------------------------------
+
+	v, found := r.Get(nil)
+	if found == true || v != nil {
+		t.Errorf("nil get")
+	}
+
+	wasNew, err := r.Set(nil, []byte("nil key disallowed"))
+	if wasNew == true || err != ErrNilKey {
+		t.Errorf("nil set")
+	}
+
+	v, found = r.Del(nil)
+	if found == true || v != nil {
+		t.Errorf("nil del")
+	}
 }
 
 func TestSize2(t *testing.T) {
@@ -90,6 +107,12 @@ func TestSize18NonGrowing(t *testing.T) {
 
 		// Deleting f11 causes a bunch of left-shift's.
 		del("f11")
+
+		// Try a zero-length'ed key that's not nil.
+		set("", "hi")
+		get("")
+		del("")
+		get("")
 	})
 
 	if r.Count != 17 {
