@@ -111,9 +111,9 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 }
 
 // Set inserts or updates a key/val into the RHMap.  The returned
-// wasInserted will be true if the mutation was a newly seen, inserted
-// key and false if the mutation was an update to an existing key.
-func (m *RHMap) Set(k Key, v Val) (wasInserted bool, err error) {
+// wasNew will be true if the mutation was a newly seen, inserted key
+// and false if the mutation was an update to an existing key.
+func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 	if k == nil {
 		return false, ErrNilKey
 	}
