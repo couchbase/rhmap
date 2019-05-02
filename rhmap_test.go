@@ -113,14 +113,34 @@ func TestSize18NonGrowing(t *testing.T) {
 		get("")
 		del("")
 		get("")
-	})
 
-	if r.Count != 17 {
-		t.Fatalf("wrong size")
-	}
-	if len(r.Items) != 18 {
-		t.Fatalf("it unexpectedly grew")
-	}
+		if r.Count != 17 {
+			t.Fatalf("wrong size")
+		}
+		if len(r.Items) != 18 {
+			t.Fatalf("it unexpectedly grew")
+		}
+
+		// Fully loaded after set x.
+		set("x", "xxx")
+		if r.Count != 18 {
+			t.Fatalf("wrong size, 18 != %d", r.Count)
+		}
+		if len(r.Items) != 18 {
+			t.Fatalf("it unexpectedly grew")
+		}
+
+		del("not-there")
+
+		// Forced to grow since we are fully loaded.
+		set("y", "yyy")
+		if r.Count != 19 {
+			t.Fatalf("wrong size, 19 != %d", r.Count)
+		}
+		if len(r.Items) != 36 {
+			t.Fatalf("it didn't grow as expected")
+		}
+	})
 }
 
 type andThen func(
