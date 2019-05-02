@@ -13,32 +13,59 @@ package rhmap
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
 )
 
 func TestSize1(t *testing.T) {
 	r := NewRHMap(1)
-	test(t, r)
+	test(t, r, true)
 	r.Reset()
-	test(t, r)
+	test(t, r, true)
 }
 
 func TestSize2(t *testing.T) {
 	r := NewRHMap(2)
-	test(t, r)
+	test(t, r, true)
 	r.Reset()
-	test(t, r)
+	test(t, r, true)
 }
 
 func TestSize10(t *testing.T) {
 	r := NewRHMap(10)
-	test(t, r)
+	test(t, r, true)
 	r.Reset()
-	test(t, r)
+	test(t, r, true)
 }
 
-func test(t *testing.T, r *RHMap) {
+func TestSize18NonGrowing(t *testing.T) {
+	r := NewRHMap(18)
+	r.MaxDistance = 100000
+
+	test(t, r, false)
+	if r.Count != 18 {
+		t.Fatalf("wrong size")
+	}
+	if len(r.Items) != 18 {
+		t.Fatalf("it unexpectedly grew")
+	}
+
+	r.Reset()
+	if r.Count != 0 {
+		t.Fatalf("expected empty after Reset()")
+	}
+
+	test(t, r, false)
+	if r.Count != 18 {
+		t.Fatalf("wrong size")
+	}
+	if len(r.Items) != 18 {
+		t.Fatalf("it unexpectedly grew")
+	}
+}
+
+func test(t *testing.T, r *RHMap, checkCopyToEnabled bool) {
 	ops := 0
 
 	g := map[string][]byte{}
@@ -115,6 +142,10 @@ func test(t *testing.T, r *RHMap) {
 	}
 
 	checkCopyTo = func() {
+		if !checkCopyToEnabled {
+			return
+		}
+
 		r2 := NewRHMap(1)
 		r2.MaxDistance = 1
 		r.CopyTo(r2)
@@ -183,7 +214,7 @@ func test(t *testing.T, r *RHMap) {
 	set("c11", "C11")
 	set("d11", "D11")
 	set("e11", "E11")
-	set("f11", "F11")
+	set("f11", "F11") // 18 entries.
 
 	get("a")
 	get("b")
