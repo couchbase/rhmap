@@ -2,7 +2,7 @@
 
 In other words: `map[[]byte][]byte` or `map[[]byte]SomeOtherType`
 
-[![GoDoc](https://godoc.org/github.com/couchbase/rhmap?status.svg)](https://godoc.org/github.com/couchbase/rhmap)
+[![GoDoc](https://godoc.org/github.com/couchbase/rhmap?status.svg)](https://godoc.org/github.com/couchbase/rhmap) [![Go Report Card](https://goreportcard.com/badge/github.com/couchbase/rhmap)](https://goreportcard.com/report/github.com/couchbase/rhmap)
 
 ## Example
 ```go
