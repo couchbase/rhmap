@@ -121,6 +121,9 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 // wasNew will be true if the mutation was on a newly seen, inserted
 // key, and wasNew will be false if the mutation was an update to an
 // existing key.
+//
+// NOTE: RHMap does not keep its own copy of the key/val's, so the
+// application should not mutate them (especially the key).
 func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 	if k == nil {
 		return false, ErrNilKey
