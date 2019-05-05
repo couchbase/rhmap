@@ -122,8 +122,10 @@ func (m *RHMap) Get(k Key) (v Val, found bool) {
 // key, and wasNew will be false if the mutation was an update to an
 // existing key.
 //
-// NOTE: RHMap does not keep its own copy of the key/val's, so the
-// application should not mutate them (especially the key).
+// NOTE: RHMap does not keep its own copy of the key/val's.
+// Especially, applications should take care not to mutate the key.
+// Careful mutations to the val bytes that do not resize the val
+// slice, however, should work.
 func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 	if k == nil {
 		return false, ErrNilKey
@@ -143,7 +145,7 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 			return true, nil
 		}
 
-		if bytes.Equal(e.Key, k) {
+		if bytes.Equal(e.Key, incoming.Key) {
 			m.Items[idx] = incoming
 			return false, nil
 		}
