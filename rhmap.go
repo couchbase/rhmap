@@ -232,9 +232,9 @@ func (m *RHMap) Del(k Key) (prev Val, existed bool) {
 	return prev, true
 }
 
-// CopyTo copies key/val's to the dst.
-func (m *RHMap) CopyTo(dst *RHMap) {
-	m.Visit(func(k Key, v Val) bool { dst.Set(k, v); return true })
+// CopyTo copies key/val's to the dest RHMap.
+func (m *RHMap) CopyTo(dest *RHMap) {
+	m.Visit(func(k Key, v Val) bool { dest.Set(k, v); return true })
 }
 
 // Visit invokes the callback on key/val. The callback can return
