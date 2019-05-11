@@ -146,7 +146,10 @@ func (m *RHMap) Set(k Key, v Val) (wasNew bool, err error) {
 		}
 
 		if bytes.Equal(e.Key, incoming.Key) {
-			m.Items[idx] = incoming
+			// NOTE: We keep the same key to allow advanced apps that
+			// know that they're doing an update to avoid key alloc's.
+			e.Val, e.Distance = incoming.Val, incoming.Distance
+
 			return false, nil
 		}
 
