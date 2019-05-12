@@ -38,11 +38,11 @@ type Val []byte
 
 // -------------------------------------------------------------------
 
-// RHStore is a persisted hashmap that uses the robinhood
-// algorithm. This implementation is not concurrent safe.
+// RHStore is a hashmap that uses the robinhood algorithm. This
+// implementation is not concurrent safe.
 //
-// Unlike with an RHMap, the key/val bytes placed into an RHStore are
-// owned or managed by the RHStore. The RHStore's internal data
+// Unlike an RHMap, the key/val bytes placed into an RHStore are
+// copied and owned by the RHStore. The RHStore's internal data
 // structures are also more "flat" than an RHMap's, allowing for
 // easier persistence with an RHStore.
 //
