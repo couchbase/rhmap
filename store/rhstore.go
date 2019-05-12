@@ -108,8 +108,8 @@ type RHStore struct {
 // into the RHStore's backing bytes.
 type Item []uint64
 
-const MaxKeyLen = (2 ^ 25) - 1
-const MaxValLen = (2 ^ 25) - 1
+const MaxKeyLen = (1 << 25) - 1
+const MaxValLen = (1 << 25) - 1
 
 const ShiftValSize = 25
 const ShiftDistance = 50
