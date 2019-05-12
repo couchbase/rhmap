@@ -22,12 +22,18 @@ import (
 // ErrNilKey means a key was nil.
 var ErrNilKey = errors.New("nil key")
 
+// ErrKeyTooBig means a key was too large.
+var ErrKeyTooBig = errors.New("key too big")
+
+// ErrValTooBig means a val was too large.
+var ErrValTooBig = errors.New("val too big")
+
 // Key is the type for a key. A key with len() of 0 is invalid.
-// Key max length is 2^25 (~33MB).
+// Key max length is 2^25-1 (~33MB).
 type Key []byte
 
 // Val is the type for a val. A nil val is valid.
-// Val max length is 2^25 (~33MB).
+// Val max length is 2^25-1 (~33MB).
 type Val []byte
 
 // -------------------------------------------------------------------
@@ -101,6 +107,9 @@ type RHStore struct {
 // The len(Item) == 3 (i.e., 3 uint64's).  The key/val offsets are
 // into the RHStore's backing bytes.
 type Item []uint64
+
+const MaxKeyLen = (2 ^ 25) - 1
+const MaxValLen = (2 ^ 25) - 1
 
 const ShiftValSize = 25
 const ShiftDistance = 50
@@ -247,6 +256,14 @@ func (m *RHStore) Get(k Key) (v Val, found bool) {
 func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 	if len(k) == 0 {
 		return false, ErrNilKey
+	}
+
+	if len(k) > MaxKeyLen {
+		return false, ErrKeyTooBig
+	}
+
+	if len(v) > MaxValLen {
+		return false, ErrValTooBig
 	}
 
 	idx := int(m.HashFunc(k) % uint32(m.Size))
