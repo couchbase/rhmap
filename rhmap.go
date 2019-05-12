@@ -28,8 +28,10 @@ type Key []byte
 // Val is the type for a val. A nil val is valid.
 type Val []byte
 
-// RHMap is a robinhood hashmap. It is not concurrent safe.
+// RHMap is a hashmap that uses the robinhood algorithm. This
+// implementation is not concurrent safe.
 type RHMap struct {
+	// Items are the slots of the hashmap for items.
 	Items []Item
 
 	// Number of keys in the RHMap.
