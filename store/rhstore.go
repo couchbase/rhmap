@@ -35,6 +35,10 @@ type Val []byte
 // owned or managed by the RHStore. The RHStore's internal data
 // structures are also more "flat" than an RHMap's, allowing for
 // easier persistence with an RHStore.
+//
+// RHStore has more hook-points or callback options than an RHMap,
+// which are intended for advanced users who might use the hook-points
+// to build a persistent data structure.
 type RHStore struct {
 	// Slots are the slots of the hashmap.
 	Slots []uint64
