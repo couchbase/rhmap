@@ -64,7 +64,7 @@ func TestSize18NonGrowing(t *testing.T) {
 	if r.Count != 18 {
 		t.Fatalf("wrong size")
 	}
-	if len(r.Slots) != 18 * 5 {
+	if len(r.Slots) != 18*3 {
 		t.Fatalf("it unexpectedly grew")
 	}
 
@@ -72,7 +72,7 @@ func TestSize18NonGrowing(t *testing.T) {
 	if r.Count != 0 {
 		t.Fatalf("expected empty after Reset()")
 	}
-	if len(r.Slots) != 18 * 5 {
+	if len(r.Slots) != 18*3 {
 		t.Fatalf("it unexpectedly grew")
 	}
 	for i := 0; i < len(r.Slots); i++ {
@@ -145,7 +145,7 @@ func TestSize18NonGrowing(t *testing.T) {
 		if r.Count != 17 {
 			t.Fatalf("wrong size after california set and del: %d", r.Count)
 		}
-		if len(r.Slots) != 18 * 5 {
+		if len(r.Slots) != 18*3 {
 			t.Fatalf("it unexpectedly grew after california")
 		}
 
@@ -154,7 +154,7 @@ func TestSize18NonGrowing(t *testing.T) {
 		if r.Count != 18 {
 			t.Fatalf("wrong size, 18 != %d", r.Count)
 		}
-		if len(r.Slots) != 18 * 5 {
+		if len(r.Slots) != 18*3 {
 			t.Fatalf("it unexpectedly grew after x")
 		}
 
@@ -165,7 +165,7 @@ func TestSize18NonGrowing(t *testing.T) {
 		if r.Count != 19 {
 			t.Fatalf("wrong size, 19 != %d", r.Count)
 		}
-		if len(r.Slots) != 36 * 5 {
+		if len(r.Slots) != 36*3 {
 			t.Fatalf("it didn't grow as expected after y")
 		}
 	})
