@@ -10,7 +10,7 @@
 //  governing permissions and limitations under the License.
 
 // Package store provides a map[[]byte][]byte based on the robin-hood
-// hashmap algorithm that's amenable to persistance or storage.
+// hashmap algorithm that's hookable with persistance or storage.
 package store
 
 import (
@@ -22,7 +22,7 @@ import (
 // ErrNilKey means a key was nil.
 var ErrNilKey = errors.New("nil key")
 
-// Key is the type for a key. A nil key is invalid.
+// Key is the type for a key. A key with len() of 0 is invalid.
 type Key []byte
 
 // Val is the type for a val. A nil val is valid.
@@ -30,6 +30,11 @@ type Val []byte
 
 // RHStore is a persisted hashmap that uses the robinhood
 // algorithm. This implementation is not concurrent safe.
+//
+// Unlike with an RHMap, the key/val bytes placed into an RHStore are
+// owned or managed by the RHStore. The RHStore's internal data
+// structures are also more "flat" than an RHMap's, allowing for
+// easier persistence with an RHStore.
 type RHStore struct {
 	// Slots are the slots of the hashmap.
 	Slots []uint64
@@ -76,7 +81,9 @@ type RHStore struct {
 }
 
 // Item represents an entry in the RHStore, where each item uses 5
-// contiguous slots (uint64's). The len(Item) == 5.
+// contiguous slots (uint64's), for keyOffset, keySize, valOffset,
+// valSize, and distance. The len(Item) == 5.  The offsets are into
+// the RHStore's backing bytes.
 type Item []uint64
 
 func (item Item) KeyOffsetSize() (uint64, uint64) {
@@ -136,7 +143,7 @@ func (m *RHStore) ItemVal(item Item) Val {
 // Reset clears RHStore, where already allocated memory will be reused.
 func (m *RHStore) Reset() {
 	slots := m.Slots
-	for i := range slots {
+	for i := 0; i < len(slots); i++ {
 		slots[i] = 0
 	}
 
@@ -199,7 +206,7 @@ func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 	idxStart := idx
 
 	incoming := m.Temp
-	incoming[3] = 0
+	incoming[4] = 0
 	incoming[2], incoming[3] = m.BytesAppend(m, v)
 	incoming[0], incoming[1] = m.BytesAppend(m, k)
 
@@ -244,9 +251,11 @@ func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 
 		// Grow if distances become big or we went all the way around.
 		if int(incoming.Distance()) > m.MaxDistance || idx == idxStart {
+			k, v = m.ItemKey(incoming), m.ItemVal(incoming)
+
 			m.Grow(m, int(float64(m.Size)*m.Growth(m)))
 
-			return m.Set(m.ItemKey(incoming), m.ItemVal(incoming))
+			return m.Set(k, v)
 		}
 	}
 }
@@ -300,14 +309,14 @@ func (m *RHStore) Del(k Key) (prev Val, existed bool) {
 			break
 		}
 
-		f := m.Item(next)
-		if len(m.ItemKey(f)) == 0 || f.Distance() <= 0 {
-			break
+		maybeShift := m.Item(next)
+		if len(m.ItemKey(maybeShift)) == 0 || maybeShift.Distance() <= 0 {
+			break // The next item is non-shiftable.
 		}
 
-		f[4]-- // Left-shift means distance drops by 1.
+		maybeShift[4]-- // Left-shift means distance drops by 1.
 
-		copy(m.Item(idx), f)
+		copy(m.Item(idx), maybeShift)
 
 		idx = next
 	}
@@ -360,8 +369,8 @@ func Grow(m *RHStore, newSize int) {
 
 // BytesTruncate is the default implementation to truncate the
 // backing bytes of an RHStore to a given length.
-func BytesTruncate(m *RHStore, n uint64) {
-	m.Bytes = m.Bytes[0:n]
+func BytesTruncate(m *RHStore, size uint64) {
+	m.Bytes = m.Bytes[0:size]
 }
 
 // BytesAppend is the default implementation to append data to the
