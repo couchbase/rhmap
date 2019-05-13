@@ -108,7 +108,12 @@ type RHStore struct {
 // into the RHStore's backing bytes.
 type Item []uint64
 
+const ItemLen = 3 // Number of uint64's needed for item metadata.
+
+// MaxKeyLen is representable by 25 bit number, or ~33MB.
 const MaxKeyLen = (1 << 25) - 1
+
+// MaxKeyLen is representable by 25 bit number, or ~33MB.
 const MaxValLen = (1 << 25) - 1
 
 const ShiftValSize = 25
@@ -151,7 +156,7 @@ func NewRHStore(size int) *RHStore {
 	h := fnv.New32a()
 
 	return &RHStore{
-		Slots: make([]uint64, size*3),
+		Slots: make([]uint64, size*ItemLen),
 
 		Size: size,
 
@@ -169,15 +174,15 @@ func NewRHStore(size int) *RHStore {
 		BytesAppend:   BytesAppend,
 		BytesRead:     BytesRead,
 
-		Temp: make(Item, 3),
+		Temp: make(Item, ItemLen),
 	}
 }
 
 // -------------------------------------------------------------------
 
 func (m *RHStore) Item(idx int) Item {
-	pos := idx * 3
-	return m.Slots[pos : pos+3]
+	pos := idx * ItemLen
+	return m.Slots[pos : pos+ItemLen]
 }
 
 func (m *RHStore) ItemKey(item Item) Key {
@@ -269,7 +274,7 @@ func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 	idx := int(m.HashFunc(k) % uint32(m.Size))
 	idxStart := idx
 
-	// NOTE: We BytesAppend() on v before k, as an update to an
+	// NOTE: BytesAppend() on v before k since an update to an
 	// existing item will clip away the unused BytesAppend(k).
 	newValOffset, newValSize := m.BytesAppend(m, v)
 	newKeyOffset, newKeySize := m.BytesAppend(m, k)
