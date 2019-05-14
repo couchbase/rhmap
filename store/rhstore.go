@@ -271,16 +271,27 @@ func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 		return false, ErrValTooBig
 	}
 
-	idx := int(m.HashFunc(k) % uint32(m.Size))
-	idxStart := idx
-
 	// NOTE: BytesAppend() on v before k since an update to an
 	// existing item will clip away the unused BytesAppend(k).
-	newValOffset, newValSize := m.BytesAppend(m, v)
-	newKeyOffset, newKeySize := m.BytesAppend(m, k)
+	vOffset, vSize := m.BytesAppend(m, v)
+	kOffset, kSize := m.BytesAppend(m, k)
 
+	wasNew, err = m.SetOffsets(kOffset, kSize, vOffset, vSize)
+	if err == nil && wasNew == false {
+		// Clip off the earlier BytesAppend(k) data.
+		m.BytesTruncate(m, kOffset)
+	}
+
+	return wasNew, err
+}
+
+func (m *RHStore) SetOffsets(kOffset, kSize, vOffset, vSize uint64) (
+	wasNew bool, err error) {
 	incoming := m.Temp
-	incoming.Encode(newKeyOffset, newKeySize, newValOffset, newValSize, 0)
+	incoming.Encode(kOffset, kSize, vOffset, vSize, 0)
+
+	idx := int(m.HashFunc(m.ItemKey(incoming)) % uint32(m.Size))
+	idxStart := idx
 
 	for {
 		e := m.Item(idx)
@@ -302,9 +313,6 @@ func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 			e.Encode(eKeyOffset, eKeySize, iValOffset, iValSize,
 				incoming.Distance())
 
-			// Clip off the earlier BytesAppend(k) data.
-			m.BytesTruncate(m, newKeyOffset)
-
 			return false, nil
 		}
 
@@ -325,7 +333,7 @@ func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 
 		// Grow if distances become big or we went all the way around.
 		if int(incoming.Distance()) > m.MaxDistance || idx == idxStart {
-			k, v = m.ItemKey(incoming), m.ItemVal(incoming)
+			k, v := m.ItemKey(incoming), m.ItemVal(incoming)
 
 			m.Grow(m, int(float64(m.Size)*m.Growth(m)))
 
