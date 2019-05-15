@@ -50,14 +50,16 @@ type Val []byte
 // which are intended for advanced users who might use the hook-points
 // to build a persistent data structure.
 type RHStore struct {
-	// Slots are the slots of the hashmap.
+	// Slots are the backing data for item metadata of the hashmap.
+	// 3 slots are used to represent a single item's metadata.
 	Slots []uint64
 
 	// Size is the max number of items this hashmap can hold.
 	// Size * 3 == len(Slots).
 	Size int
 
-	// Bytes is the backing slice for keys, vals and other data.
+	// Bytes is the backing slice for key/val data that's used by the
+	// default BytesTruncate/Append/Read() implementations.
 	Bytes []byte
 
 	// Number of items in the RHStore.
@@ -116,8 +118,8 @@ const MaxKeyLen = (1 << 25) - 1
 // MaxKeyLen is representable by 25 bit number, or ~33MB.
 const MaxValLen = (1 << 25) - 1
 
-const ShiftValSize = 25
-const ShiftDistance = 50
+const ShiftValSize = 25  // # of bits to left-shift a 25-bit ValSize.
+const ShiftDistance = 50 // # of bits to left-shift a 14-bit Distance.
 
 const MaskKeySize = uint64(0x0000000001FFFFFF)  // 25 bits.
 const MaskValSize = uint64(0x0003FFFFFE000000)  // 25 bits << ShiftValSize.
@@ -151,7 +153,7 @@ func (item Item) Encode(
 
 // -------------------------------------------------------------------
 
-// NewRHStore returns a new RHStore.
+// NewRHStore returns a ready-to-use RHStore.
 func NewRHStore(size int) *RHStore {
 	h := fnv.New32a()
 
@@ -204,18 +206,17 @@ func (m *RHStore) Reset() error {
 		slots[i] = 0
 	}
 
-	err := m.BytesTruncate(m, 0)
-
 	m.Count = 0
 
-	return err
+	return m.BytesTruncate(m, 0)
 }
 
 // -------------------------------------------------------------------
 
-// Get retrieves the val for a given key.  The returned val, if found,
+// Get retrieves the val for a given key. The returned val, if found,
 // is a slice into the RHStore's backing bytes and should only be used
-// within its returned len() -- don't append() to the returned val.
+// within its returned len() -- don't append() to the returned val as
+// that might incorrectly overwrite unrelated data.
 func (m *RHStore) Get(k Key) (v Val, found bool) {
 	if len(k) == 0 {
 		return Val(nil), false
@@ -255,16 +256,17 @@ func (m *RHStore) Get(k Key) (v Val, found bool) {
 // -------------------------------------------------------------------
 
 // Set inserts or updates a key/val into the RHStore. The returned
-// wasNew will be true if the mutation was on a newly seen, inserted
+// wasNew will be true if the mutation was on a newly-seen inserted
 // key, and wasNew will be false if the mutation was an update to an
 // existing key.
 //
 // NOTE: RHStore appends or copies the incoming key/val into its
 // backing bytes. Multiple updates to the same key will continue to
 // grow the backing bytes -- i.e., the backing bytes are not reused or
-// recycled during a Set(). Applications may instead use CopyTo() to
-// copy live key/val data to another RHStore, or mutate val bytes
-// in-place.
+// recycled during a Set(). Applications that need to really remove
+// deleted bytes may instead use CopyTo() to copy live key/val data to
+// another RHStore. Applications might also mutate val bytes in-place
+// as another way to save allocations.
 func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 	if len(k) == 0 {
 		return false, ErrKeyZeroLen
@@ -292,7 +294,8 @@ func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 
 	wasNew, err = m.SetOffsets(kOffset, kSize, vOffset, vSize)
 	if err == nil && wasNew == false {
-		// Clip off the earlier BytesAppend(k) data.
+		// Truncate off the earlier BytesAppend(k) since updates will
+		// reuse the existing key.
 		err = m.BytesTruncate(m, kOffset)
 	}
 
@@ -332,8 +335,8 @@ func (m *RHStore) SetOffsets(kOffset, kSize, vOffset, vSize uint64) (
 		}
 
 		if bytes.Equal(itemKey, itemKeyIncoming) {
-			// NOTE: We keep the same key to allow advanced apps that
-			// know that they're doing an update to avoid key alloc's.
+			// NOTE: We keep the same key during an update to avoid
+			// a duplicate key allocation.
 			eKeyOffset, eKeySize := e.KeyOffsetSize()
 
 			iValOffset, iValSize := incoming.ValOffsetSize()
@@ -344,7 +347,8 @@ func (m *RHStore) SetOffsets(kOffset, kSize, vOffset, vSize uint64) (
 			return false, nil
 		}
 
-		// Swap if the incoming item is further from its best idx.
+		// Swap if the incoming item is further from its best idx,
+		// which is the robin-hood algorithm's main headline.
 		if e.Distance() < incoming.Distance() {
 			for i := range incoming {
 				incoming[i], e[i] = e[i], incoming[i]
@@ -376,7 +380,7 @@ func (m *RHStore) SetOffsets(kOffset, kSize, vOffset, vSize uint64) (
 
 			err = m.Grow(m, int(float64(m.Size)*m.Growth(m)))
 			if err != nil {
-				return false, nil
+				return false, err
 			}
 
 			return m.Set(kCopy, vCopy)
@@ -392,7 +396,7 @@ func (m *RHStore) SetOffsets(kOffset, kSize, vOffset, vSize uint64) (
 // NOTE: RHStore does not remove key/val data from its backing bytes,
 // so deletes of items will not reduce memory usage. Applications may
 // instead use CopyTo() to copy any remaining live key/val data to
-// another RHStore.
+// another, potentially smaller RHStore.
 func (m *RHStore) Del(k Key) (prev Val, existed bool, err error) {
 	if len(k) == 0 {
 		return Val(nil), false, ErrKeyZeroLen
@@ -406,7 +410,7 @@ func (m *RHStore) Del(k Key) (prev Val, existed bool, err error) {
 
 		itemKey, err := m.ItemKey(e)
 		if err != nil || len(itemKey) == 0 {
-			return Val(nil), false, nil
+			return Val(nil), false, err
 		}
 
 		if bytes.Equal(itemKey, k) {
