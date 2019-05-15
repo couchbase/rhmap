@@ -29,7 +29,7 @@ func CreateRHStoreFile(pathPrefix string, options RHStoreFileOptions) (
 		Options:    options,
 	}
 
-	slots, err := CreateFileAsMMapRef("", options.StartSize * 8 * ItemLen)
+	slots, err := CreateFileAsMMapRef("", options.StartSize*8*ItemLen)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func CreateRHStoreFile(pathPrefix string, options RHStoreFileOptions) (
 	sf.BytesTruncate = func(m *RHStore, size uint64) error {
 		prevChunkLens := sf.PrevChunkLens()
 
-		if size > uint64(prevChunkLens + chunkSizeBytes) {
+		if size > uint64(prevChunkLens+chunkSizeBytes) {
 			return nil
 		}
 
@@ -257,7 +257,7 @@ func (sf *RHStoreFile) GrowSlots(nextSize int) error {
 		sf.PathPrefix, nextGeneration, sf.Options.FileSuffix)
 
 	nextSlots, err :=
-		CreateFileAsMMapRef(nextSlotsPath, nextSize * 8 * ItemLen)
+		CreateFileAsMMapRef(nextSlotsPath, nextSize*8*ItemLen)
 	if err != nil {
 		return err
 	}
@@ -278,8 +278,11 @@ func (sf *RHStoreFile) GrowSlots(nextSize int) error {
 
 	nextRHStore.Size = nextSize
 
+	nextRHStore.Count = 0
+
 	// While copying, we temporarily max out the MaxDistance, to avoid
 	// a recursion of growing while we're growing.
+	origRHStoreMaxDistance := nextRHStore.MaxDistance
 	nextRHStore.MaxDistance = math.MaxInt32
 
 	// Copy the existing key/val offset/size metadata to nextRHStore.
@@ -292,7 +295,7 @@ func (sf *RHStoreFile) GrowSlots(nextSize int) error {
 		return cleanup(err)
 	}
 
-	nextRHStore.MaxDistance = sf.Options.MaxDistance
+	nextRHStore.MaxDistance = origRHStoreMaxDistance
 
 	sf.RHStore = nextRHStore
 
@@ -337,7 +340,7 @@ func (sf *RHStoreFile) AddChunk(memOnly bool) (err error) {
 // last chunk.
 func (sf *RHStoreFile) PrevChunkLens() int {
 	if len(sf.Chunks) > 1 {
-		return (len(sf.Chunks)-1) * sf.Options.ChunkSizeBytes
+		return (len(sf.Chunks) - 1) * sf.Options.ChunkSizeBytes
 	}
 
 	return 0

@@ -54,22 +54,6 @@ func TestSize2(t *testing.T) {
 	test(t, r, true, nil)
 }
 
-func TestRHStoreFile(t *testing.T) {
-	dir, _ := ioutil.TempDir("", "testRHStoreFile")
-	defer os.RemoveAll(dir)
-
-	sf, err := CreateRHStoreFile(dir, DefaultRHStoreFileOptions)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	r := &sf.RHStore
-
-	test(t, r, true, nil)
-	r.Reset()
-	test(t, r, true, nil)
-}
-
 func TestSize10(t *testing.T) {
 	r := NewRHStore(10)
 	test(t, r, true, nil)
@@ -81,6 +65,10 @@ func TestSize18NonGrowing(t *testing.T) {
 	r := NewRHStore(18)
 	r.MaxDistance = 100000
 
+	testSize18NonGrowing(t, r)
+}
+
+func testSize18NonGrowing(t *testing.T, r *RHStore) {
 	test(t, r, false, nil)
 	if r.Count != 18 {
 		t.Fatalf("wrong size")
@@ -252,7 +240,14 @@ func test(t *testing.T, r *RHStore,
 			t.Fatalf("ops: %d, set err", ops)
 		}
 		if r.Count != len(g) {
-			t.Fatalf("ops: %d, set different counts", ops)
+			r.Visit(func(k Key, v Val) bool {
+				fmt.Printf("  k: %s, v: %s\n", k, v)
+				return true
+			})
+
+			t.Fatalf("ops: %d, set different counts, k: %s, v: %s,"+
+				" r.Count: %d, len(g): %d, g: %+v",
+				ops, k, v, r.Count, len(g), g)
 		}
 		if rwasNew != gwasNew {
 			t.Fatalf("ops: %d, set different wasNew", ops)
@@ -373,4 +368,65 @@ func test(t *testing.T, r *RHStore,
 	if andThen != nil {
 		andThen(g, get, set, del)
 	}
+}
+
+func TestRHStoreFileDefaultOptions(t *testing.T) {
+	options := DefaultRHStoreFileOptions
+	testRHStoreFile(t, options)
+}
+
+func TestRHStoreFileSize1(t *testing.T) {
+	options := DefaultRHStoreFileOptions
+	options.StartSize = 1
+	testRHStoreFile(t, options)
+}
+
+func TestRHStoreFileSize2(t *testing.T) {
+	options := DefaultRHStoreFileOptions
+	options.StartSize = 2
+	testRHStoreFile(t, options)
+}
+
+func TestRHStoreFileSize10(t *testing.T) {
+	options := DefaultRHStoreFileOptions
+	options.StartSize = 10
+	testRHStoreFile(t, options)
+}
+
+func testRHStoreFile(t *testing.T, options RHStoreFileOptions) {
+	dir, _ := ioutil.TempDir("", "testRHStoreFile")
+	defer os.RemoveAll(dir)
+
+	sf, err := CreateRHStoreFile(dir, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer sf.Close()
+
+	r := &sf.RHStore
+
+	test(t, r, true, nil)
+	r.Reset()
+	test(t, r, true, nil)
+}
+
+func TestRHStoreFileSize18NonGrowing(t *testing.T) {
+	options := DefaultRHStoreFileOptions
+	options.StartSize = 18
+	options.MaxDistance = 100000
+
+	dir, _ := ioutil.TempDir("", "testRHStoreFile")
+	defer os.RemoveAll(dir)
+
+	sf, err := CreateRHStoreFile(dir, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer sf.Close()
+
+	r := &sf.RHStore
+
+	testSize18NonGrowing(t, r)
 }
