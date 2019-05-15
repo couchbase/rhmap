@@ -14,6 +14,8 @@ package store
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -47,6 +49,22 @@ func TestSize1(t *testing.T) {
 
 func TestSize2(t *testing.T) {
 	r := NewRHStore(2)
+	test(t, r, true, nil)
+	r.Reset()
+	test(t, r, true, nil)
+}
+
+func TestRHStoreFile(t *testing.T) {
+	dir, _ := ioutil.TempDir("", "testRHStoreFile")
+	defer os.RemoveAll(dir)
+
+	sf, err := CreateRHStoreFile(dir, DefaultRHStoreFileOptions)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := &sf.RHStore
+
 	test(t, r, true, nil)
 	r.Reset()
 	test(t, r, true, nil)
