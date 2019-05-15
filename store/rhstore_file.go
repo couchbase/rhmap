@@ -144,6 +144,9 @@ func CreateRHStoreFile(pathPrefix string, options RHStoreFileOptions) (
 // RHStoreFile represents a persisted hashmap. Its implementation is
 // not concurrent safe.
 //
+// Unlike an RHMap or RHStore, the key's and val's in an RHStoreFile
+// may not be larger than the Options.ChunkSizeBytes.
+//
 // The design point is to support applications that need to process or
 // analyze ephemeral data which becomes large enough to not fit
 // comfortably into memory, where an temporary, spillable hashmap is
@@ -183,9 +186,6 @@ type RHStoreFile struct {
 	// which is the chunk that is being appended to when there are
 	// new, incoming key/val items.
 	LastChunkLen int
-
-	// CloseCleanup of true means that Close() will also remove files.
-	CloseCleanup bool
 }
 
 // ---------------------------------------------

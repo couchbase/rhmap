@@ -430,3 +430,71 @@ func TestRHStoreFileSize18NonGrowing(t *testing.T) {
 
 	testSize18NonGrowing(t, r)
 }
+
+func TestRHStoreFileBigKeyVal(t *testing.T) {
+	dir, _ := ioutil.TempDir("", "testRHStoreFile")
+	defer os.RemoveAll(dir)
+
+	options := DefaultRHStoreFileOptions
+	options.ChunkSizeBytes = 10
+
+	sf, err := CreateRHStoreFile(dir, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer sf.Close()
+
+	r := &sf.RHStore
+
+	big := make([]byte, options.ChunkSizeBytes+1)
+
+	wasNew, err := r.Set(big, []byte("a"))
+	if err == nil || wasNew {
+		t.Errorf("expected err, got: %v, %t", err, wasNew)
+	}
+
+	wasNew, err = r.Set([]byte("a"), big)
+	if err == nil || wasNew {
+		t.Errorf("expected err, got: %v, %t", err, wasNew)
+	}
+
+	justRight := make([]byte, options.ChunkSizeBytes)
+
+	wasNew, err = r.Set(justRight, []byte("a"))
+	if err != nil || !wasNew {
+		t.Errorf("expected no err, got: %v, %t", err, wasNew)
+	}
+
+	wasNew, err = r.Set([]byte("a"), justRight)
+	if err != nil || !wasNew {
+		t.Errorf("expected no err, got: %v, %t", err, wasNew)
+	}
+
+	if len(sf.Chunks) != 4 {
+		t.Errorf("expected 4 chunks after inserting justRight, got: %d",
+			len(sf.Chunks))
+	}
+
+	if sf.Chunks[0].Path != "" || sf.Chunks[0].File != nil {
+		t.Errorf("expected chunk 0 to be in-memory")
+	}
+
+	for i := 1; i < len(sf.Chunks); i++ {
+		if sf.Chunks[i].Path == "" || sf.Chunks[i].File == nil {
+			t.Errorf("expected rest chunk to be persisted")
+		}
+	}
+
+	if sf.LastChunkLen != 1 { // For key "a"
+		t.Errorf("expected LastChunkLen == 1, got: %d", sf.LastChunkLen)
+	}
+
+	if sf.Generation != 0 {
+		t.Errorf("expected generation 0, got: %d", sf.Generation)
+	}
+
+	if sf.Slots.Path != "" || sf.Slots.File != nil {
+		t.Errorf("expected slots to be in-memory")
+	}
+}
