@@ -19,8 +19,8 @@ import (
 	"hash/fnv"
 )
 
-// ErrNilKey means a key was nil.
-var ErrNilKey = errors.New("nil key")
+// ErrKeyZeroLen means a key was nil.
+var ErrKeyZeroLen = errors.New("key zero len")
 
 // ErrKeyTooBig means a key was too large.
 var ErrKeyTooBig = errors.New("key too big")
@@ -75,16 +75,16 @@ type RHStore struct {
 	Growth func(*RHStore) float64
 
 	// Overridable func to grow the RHStore.
-	Grow func(m *RHStore, newSize int)
+	Grow func(m *RHStore, newSize int) error
 
 	// Overridable func to truncate the backing bytes.
-	BytesTruncate func(m *RHStore, n uint64)
+	BytesTruncate func(m *RHStore, n uint64) error
 
 	// Overridable func to append data to the backing bytes.
-	BytesAppend func(m *RHStore, b []byte) (offset, size uint64)
+	BytesAppend func(m *RHStore, b []byte) (offset, size uint64, err error)
 
 	// Overridable func to read data from the backing bytes.
-	BytesRead func(m *RHStore, offset, size uint64) []byte
+	BytesRead func(m *RHStore, offset, size uint64) ([]byte, error)
 
 	// Extra is for optional data that the application wants to
 	// associate with the RHStore instance.
@@ -185,12 +185,12 @@ func (m *RHStore) Item(idx int) Item {
 	return m.Slots[pos : pos+ItemLen]
 }
 
-func (m *RHStore) ItemKey(item Item) Key {
+func (m *RHStore) ItemKey(item Item) (Key, error) {
 	offset, size := item.KeyOffsetSize()
 	return m.BytesRead(m, offset, size)
 }
 
-func (m *RHStore) ItemVal(item Item) Val {
+func (m *RHStore) ItemVal(item Item) (Val, error) {
 	offset, size := item.ValOffsetSize()
 	return m.BytesRead(m, offset, size)
 }
@@ -198,15 +198,17 @@ func (m *RHStore) ItemVal(item Item) Val {
 // -------------------------------------------------------------------
 
 // Reset clears RHStore, where already allocated memory will be reused.
-func (m *RHStore) Reset() {
+func (m *RHStore) Reset() error {
 	slots := m.Slots
 	for i := 0; i < len(slots); i++ {
 		slots[i] = 0
 	}
 
-	m.BytesTruncate(m, 0)
+	err := m.BytesTruncate(m, 0)
 
 	m.Count = 0
+
+	return err
 }
 
 // -------------------------------------------------------------------
@@ -225,13 +227,18 @@ func (m *RHStore) Get(k Key) (v Val, found bool) {
 	for {
 		e := m.Item(idx)
 
-		itemKey := m.ItemKey(e)
-		if len(itemKey) == 0 {
+		itemKey, err := m.ItemKey(e)
+		if err != nil || len(itemKey) == 0 {
 			return Val(nil), false
 		}
 
 		if bytes.Equal(itemKey, k) {
-			return m.ItemVal(e), true
+			itemVal, err := m.ItemVal(e)
+			if err != nil {
+				return Val(nil), false
+			}
+
+			return itemVal, true
 		}
 
 		idx++
@@ -260,7 +267,7 @@ func (m *RHStore) Get(k Key) (v Val, found bool) {
 // in-place.
 func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 	if len(k) == 0 {
-		return false, ErrNilKey
+		return false, ErrKeyZeroLen
 	}
 
 	if len(k) > MaxKeyLen {
@@ -273,13 +280,20 @@ func (m *RHStore) Set(k Key, v Val) (wasNew bool, err error) {
 
 	// NOTE: BytesAppend() on v before k since an update to an
 	// existing item will clip away the unused BytesAppend(k).
-	vOffset, vSize := m.BytesAppend(m, v)
-	kOffset, kSize := m.BytesAppend(m, k)
+	vOffset, vSize, err := m.BytesAppend(m, v)
+	if err != nil {
+		return false, err
+	}
+
+	kOffset, kSize, err := m.BytesAppend(m, k)
+	if err != nil {
+		return false, err
+	}
 
 	wasNew, err = m.SetOffsets(kOffset, kSize, vOffset, vSize)
 	if err == nil && wasNew == false {
 		// Clip off the earlier BytesAppend(k) data.
-		m.BytesTruncate(m, kOffset)
+		err = m.BytesTruncate(m, kOffset)
 	}
 
 	return wasNew, err
@@ -290,20 +304,34 @@ func (m *RHStore) SetOffsets(kOffset, kSize, vOffset, vSize uint64) (
 	incoming := m.Temp
 	incoming.Encode(kOffset, kSize, vOffset, vSize, 0)
 
-	idx := int(m.HashFunc(m.ItemKey(incoming)) % uint32(m.Size))
+	incomingItemKey, err := m.ItemKey(incoming)
+	if err != nil {
+		return false, err
+	}
+
+	idx := int(m.HashFunc(incomingItemKey) % uint32(m.Size))
 	idxStart := idx
 
 	for {
 		e := m.Item(idx)
 
-		itemKey := m.ItemKey(e)
+		itemKey, err := m.ItemKey(e)
+		if err != nil {
+			return false, err
+		}
+
 		if len(itemKey) == 0 {
 			copy(e, incoming)
 			m.Count++
 			return true, nil
 		}
 
-		if bytes.Equal(itemKey, m.ItemKey(incoming)) {
+		itemKeyIncoming, err := m.ItemKey(incoming)
+		if err != nil {
+			return false, err
+		}
+
+		if bytes.Equal(itemKey, itemKeyIncoming) {
 			// NOTE: We keep the same key to allow advanced apps that
 			// know that they're doing an update to avoid key alloc's.
 			eKeyOffset, eKeySize := e.KeyOffsetSize()
@@ -333,11 +361,25 @@ func (m *RHStore) SetOffsets(kOffset, kSize, vOffset, vSize uint64) (
 
 		// Grow if distances become big or we went all the way around.
 		if int(incoming.Distance()) > m.MaxDistance || idx == idxStart {
-			k, v := m.ItemKey(incoming), m.ItemVal(incoming)
+			k, err := m.ItemKey(incoming)
+			if err != nil {
+				return false, err
+			}
 
-			m.Grow(m, int(float64(m.Size)*m.Growth(m)))
+			v, err := m.ItemVal(incoming)
+			if err != nil {
+				return false, err
+			}
 
-			return m.Set(k, v)
+			kCopy := append([]byte(nil), k...)
+			vCopy := append([]byte(nil), v...)
+
+			err = m.Grow(m, int(float64(m.Size)*m.Growth(m)))
+			if err != nil {
+				return false, nil
+			}
+
+			return m.Set(kCopy, vCopy)
 		}
 	}
 }
@@ -351,9 +393,9 @@ func (m *RHStore) SetOffsets(kOffset, kSize, vOffset, vSize uint64) (
 // so deletes of items will not reduce memory usage. Applications may
 // instead use CopyTo() to copy any remaining live key/val data to
 // another RHStore.
-func (m *RHStore) Del(k Key) (prev Val, existed bool) {
+func (m *RHStore) Del(k Key) (prev Val, existed bool, err error) {
 	if len(k) == 0 {
-		return Val(nil), false
+		return Val(nil), false, ErrKeyZeroLen
 	}
 
 	idx := int(m.HashFunc(k) % uint32(m.Size))
@@ -362,13 +404,17 @@ func (m *RHStore) Del(k Key) (prev Val, existed bool) {
 	for {
 		e := m.Item(idx)
 
-		itemKey := m.ItemKey(e)
-		if len(itemKey) == 0 {
-			return Val(nil), false
+		itemKey, err := m.ItemKey(e)
+		if err != nil || len(itemKey) == 0 {
+			return Val(nil), false, nil
 		}
 
 		if bytes.Equal(itemKey, k) {
-			prev = m.ItemVal(e)
+			prev, err = m.ItemVal(e)
+			if err != nil {
+				return Val(nil), false, err
+			}
+
 			break // Found the item.
 		}
 
@@ -378,7 +424,7 @@ func (m *RHStore) Del(k Key) (prev Val, existed bool) {
 		}
 
 		if idx == idxStart {
-			return Val(nil), false
+			return Val(nil), false, nil
 		}
 	}
 
@@ -394,7 +440,13 @@ func (m *RHStore) Del(k Key) (prev Val, existed bool) {
 		}
 
 		maybeShift := m.Item(next)
-		if len(m.ItemKey(maybeShift)) == 0 || maybeShift.Distance() <= 0 {
+
+		maybeShiftKey, err := m.ItemKey(maybeShift)
+		if err != nil {
+			return Val(nil), false, err
+		}
+
+		if len(maybeShiftKey) == 0 || maybeShift.Distance() <= 0 {
 			break // The next item is non-shiftable.
 		}
 
@@ -412,7 +464,7 @@ func (m *RHStore) Del(k Key) (prev Val, existed bool) {
 
 	m.Count--
 
-	return prev, true
+	return prev, true, nil
 }
 
 // -------------------------------------------------------------------
@@ -425,23 +477,57 @@ func (m *RHStore) CopyTo(dest *RHStore) {
 // -------------------------------------------------------------------
 
 // Visit invokes the callback on key/val. The callback can return
-// false to exit the visitation early.
-func (m *RHStore) Visit(callback func(k Key, v Val) (keepGoing bool)) {
+// false to stop the visitation early.
+func (m *RHStore) Visit(
+	callback func(k Key, v Val) (keepGoing bool)) error {
 	for i := 0; i < m.Size; i++ {
 		e := m.Item(i)
-		itemKey := m.ItemKey(e)
+
+		itemKey, err := m.ItemKey(e)
+		if err != nil {
+			return err
+		}
+
 		if len(itemKey) != 0 {
-			if !callback(itemKey, m.ItemVal(e)) {
-				return
+			itemVal, err := m.ItemVal(e)
+			if err != nil {
+				return err
+			}
+
+			if !callback(itemKey, itemVal) {
+				return nil
 			}
 		}
 	}
+
+	return nil
+}
+
+// VisitOffsets invokes the callback on each item's key/val
+// offsets. The callback can return false to stop the visitation
+// early.
+func (m *RHStore) VisitOffsets(
+	callback func(kOffset, kSize, vOffset, vSize uint64) (keepGoing bool)) error {
+	for i := 0; i < m.Size; i++ {
+		e := m.Item(i)
+
+		kOffset, kSize := e.KeyOffsetSize()
+		if kOffset != 0 && kSize != 0 {
+			vOffset, vSize := e.ValOffsetSize()
+
+			if !callback(kOffset, kSize, vOffset, vSize) {
+				return nil
+			}
+		}
+	}
+
+	return nil
 }
 
 // -------------------------------------------------------------------
 
 // Grow is the default implementation to grow a RHStore.
-func Grow(m *RHStore, newSize int) {
+func Grow(m *RHStore, newSize int) error {
 	grow := NewRHStore(newSize)
 	grow.HashFunc = m.HashFunc
 	grow.MaxDistance = m.MaxDistance
@@ -455,26 +541,29 @@ func Grow(m *RHStore, newSize int) {
 	m.CopyTo(grow)
 
 	*m = *grow
+
+	return nil
 }
 
 // -------------------------------------------------------------------
 
 // BytesTruncate is the default implementation to truncate the
 // backing bytes of an RHStore to a given length.
-func BytesTruncate(m *RHStore, size uint64) {
+func BytesTruncate(m *RHStore, size uint64) error {
 	m.Bytes = m.Bytes[0:size]
+	return nil
 }
 
 // BytesAppend is the default implementation to append data to the
 // backing bytes of an RHStore.
-func BytesAppend(m *RHStore, b []byte) (offset, size uint64) {
+func BytesAppend(m *RHStore, b []byte) (offset, size uint64, err error) {
 	offset = uint64(len(m.Bytes))
 	m.Bytes = append(m.Bytes, b...)
-	return offset, uint64(len(b))
+	return offset, uint64(len(b)), nil
 }
 
 // BytesRead is the default implementation to read a bytes from the
 // backing bytes of an RHStore.
-func BytesRead(m *RHStore, offset, size uint64) []byte {
-	return m.Bytes[offset : offset+size]
+func BytesRead(m *RHStore, offset, size uint64) ([]byte, error) {
+	return m.Bytes[offset : offset+size], nil
 }

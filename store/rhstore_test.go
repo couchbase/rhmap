@@ -31,12 +31,15 @@ func TestSize1(t *testing.T) {
 		t.Errorf("nil get")
 	}
 
-	wasNew, err := r.Set(nil, []byte("nil key disallowed"))
-	if wasNew == true || err != ErrNilKey {
+	wasNew, err := r.Set(nil, []byte("zero len key disallowed"))
+	if wasNew == true || err != ErrKeyZeroLen {
 		t.Errorf("nil set")
 	}
 
-	v, found = r.Del(nil)
+	v, found, err = r.Del(nil)
+	if err == nil {
+		t.Errorf("del expected err")
+	}
 	if found == true || v != nil {
 		t.Errorf("nil del")
 	}
@@ -114,19 +117,26 @@ func TestSize18NonGrowing(t *testing.T) {
 			t.Fatalf("wrong size after main test: %d", r.Count)
 		}
 
-		if string(r.ItemKey(r.Item(0))) != "f11" {
+		ikey, _ := r.ItemKey(r.Item(0))
+		if string(ikey) != "f11" {
+			ikey, _ := r.ItemKey(r.Item(0))
+			ival, _ := r.ItemVal(r.Item(0))
 			t.Errorf("expected 0th key to be f11, got: %v, %v, %d",
-				r.ItemKey(r.Item(0)), r.ItemVal(r.Item(0)), r.Size)
+				ikey, ival, r.Size)
 
 			for i := 0; i < r.Size; i++ {
 				item := r.Item(i)
+				ikey, _ := r.ItemKey(item)
+				ival, _ := r.ItemVal(item)
+
 				fmt.Printf("  %v => %v, %d\n",
-					r.ItemKey(item), r.ItemVal(item), item.Distance())
+					ikey, ival, item.Distance())
 			}
 		}
-		if string(r.ItemKey(r.Item(1))) != "a11" {
-			t.Errorf("expected 1th key to be a11, got: %v",
-				r.ItemKey(r.Item(1)))
+
+		ikey, _ = r.ItemKey(r.Item(1))
+		if string(ikey) != "a11" {
+			t.Errorf("expected 1th key to be a11, got: %v", ikey)
 		}
 
 		// Deleting f11 causes a bunch of left-shift's.
@@ -236,7 +246,10 @@ func test(t *testing.T, r *RHStore,
 	del := func(k string) {
 		ops++
 
-		rprevious, rexisted := r.Del([]byte(k))
+		rprevious, rexisted, err := r.Del([]byte(k))
+		if err != nil {
+			t.Fatalf("ops: %d, del err: %v", ops, err)
+		}
 
 		gprevious, gexisted := g[k]
 		delete(g, k)
