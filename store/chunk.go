@@ -43,7 +43,7 @@ func (cs *Chunks) BytesTruncate(size uint64) error {
 		return nil
 	}
 
-	if uint64(prevChunkLens) < size {
+	if uint64(prevChunkLens) <= size {
 		// The truncate is within the last chunk.
 		cs.LastChunkLen = int(size) - prevChunkLens
 
@@ -59,15 +59,17 @@ func (cs *Chunks) BytesTruncate(size uint64) error {
 		return fmt.Errorf("chunk: BytesTruncate unsupported size")
 	}
 
-	// The truncate is to 0, so clear all the file-based chunks.
-	for _, chunk := range cs.Chunks[1:] {
-		chunk.Close() // TODO: Recycle chunk.
-		chunk.Remove()
-	}
-	cs.Chunks = cs.Chunks[:1] // Keep 0'th in-memory-only chunk.
+	if len(cs.Chunks) > 0 {
+		// The truncate is to 0, so clear all the file-based chunks.
+		for _, chunk := range cs.Chunks[1:] {
+			chunk.Close() // TODO: Recycle chunk.
+			chunk.Remove()
+		}
+		cs.Chunks = cs.Chunks[:1] // Keep 0'th in-memory-only chunk.
 
-	// Special case the 0'th in-memory chunk.
-	cs.Chunks[0].Buf = cs.Chunks[0].Buf[:0]
+		// Special case the 0'th in-memory chunk.
+		cs.Chunks[0].Buf = cs.Chunks[0].Buf[:0]
+	}
 
 	cs.LastChunkLen = 0
 
