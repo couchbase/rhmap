@@ -61,9 +61,10 @@ func (cs *Chunks) BytesTruncate(size uint64) error {
 
 	if len(cs.Chunks) > 0 {
 		// The truncate is to 0, so clear all the file-based chunks.
-		for _, chunk := range cs.Chunks[1:] {
+		for i, chunk := range cs.Chunks[1:] {
 			chunk.Close() // TODO: Recycle chunk.
 			chunk.Remove()
+			cs.Chunks[i] = nil
 		}
 		cs.Chunks = cs.Chunks[:1] // Keep 0'th in-memory-only chunk.
 
@@ -136,9 +137,10 @@ func (cs *Chunks) BytesRead(offset, size uint64) (
 
 // Close releases resources used by the chunk files.
 func (cs *Chunks) Close() error {
-	for _, chunk := range cs.Chunks {
+	for i, chunk := range cs.Chunks {
 		chunk.Close()
 		chunk.Remove()
+		cs.Chunks[i] = nil
 	}
 	cs.Chunks = nil
 
