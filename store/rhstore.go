@@ -92,6 +92,8 @@ type RHStore struct {
 	// associate with the RHStore instance.
 	Extra interface{}
 
+	Close func() error
+
 	// Temp is used during mutations to avoid memory allocations.
 	Temp Item
 }
@@ -175,6 +177,8 @@ func NewRHStore(size int) *RHStore {
 		BytesTruncate: BytesTruncate,
 		BytesAppend:   BytesAppend,
 		BytesRead:     BytesRead,
+
+		Close: func() error { return nil },
 
 		Temp: make(Item, ItemLen),
 	}

@@ -68,6 +68,8 @@ func CreateRHStoreFile(pathPrefix string, options RHStoreFileOptions) (
 		return sf.Chunks.BytesRead(offset, size)
 	}
 
+	sf.RHStore.Close = sf.Close
+
 	return sf, nil
 }
 

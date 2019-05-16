@@ -76,7 +76,7 @@ func (cs *Chunks) BytesAppend(b []byte) (
 	}
 
 	if len(b) <= 0 {
-		return uint64(0), uint64(0), nil
+		return 0, 0, nil
 	}
 
 	if len(cs.Chunks) <= 0 || cs.LastChunkLen+len(b) > cs.ChunkSizeBytes {
