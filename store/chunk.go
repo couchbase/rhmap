@@ -47,6 +47,11 @@ func (cs *Chunks) BytesTruncate(size uint64) error {
 		// The truncate is within the last chunk.
 		cs.LastChunkLen = int(size) - prevChunkLens
 
+		if len(cs.Chunks) == 1 {
+			// Special case the 0'th in-memory chunk.
+			cs.Chunks[0].Buf = cs.Chunks[0].Buf[:cs.LastChunkLen]
+		}
+
 		return nil
 	}
 
@@ -60,6 +65,9 @@ func (cs *Chunks) BytesTruncate(size uint64) error {
 		chunk.Remove()
 	}
 	cs.Chunks = cs.Chunks[:1] // Keep 0'th in-memory-only chunk.
+
+	// Special case the 0'th in-memory chunk.
+	cs.Chunks[0].Buf = cs.Chunks[0].Buf[:0]
 
 	cs.LastChunkLen = 0
 
@@ -92,7 +100,12 @@ func (cs *Chunks) BytesAppend(b []byte) (
 
 	cs.LastChunkLen = lastChunkLen + len(b)
 
-	copy(lastChunk.Buf[lastChunkLen:cs.LastChunkLen], b)
+	// Special case in-memory only chunk which uses append().
+	if lastChunk.File == nil {
+		lastChunk.Buf = append(lastChunk.Buf, b...)
+	} else {
+		copy(lastChunk.Buf[lastChunkLen:cs.LastChunkLen], b)
+	}
 
 	return uint64(cs.PrevChunkLens() + lastChunkLen), uint64(len(b)), nil
 }
@@ -137,13 +150,15 @@ func (cs *Chunks) Close() error {
 // AddChunk appends a new chunk file to the chunks.
 func (cs *Chunks) AddChunk() (err error) {
 	var chunkPath string
+	var chunkSizeBytes int
 
 	if len(cs.Chunks) > 0 {
 		chunkPath = fmt.Sprintf("%s_chunk_%09d%s",
 			cs.PathPrefix, len(cs.Chunks), cs.FileSuffix)
+		chunkSizeBytes = cs.ChunkSizeBytes
 	}
 
-	chunk, err := CreateFileAsMMapRef(chunkPath, cs.ChunkSizeBytes)
+	chunk, err := CreateFileAsMMapRef(chunkPath, chunkSizeBytes)
 	if err != nil {
 		return err
 	}
