@@ -471,23 +471,24 @@ func TestRHStoreFileBigKeyVal(t *testing.T) {
 		t.Errorf("expected no err, got: %v, %t", err, wasNew)
 	}
 
-	if len(sf.Chunks) != 4 {
+	if len(sf.Chunks.Chunks) != 4 {
 		t.Errorf("expected 4 chunks after inserting justRight, got: %d",
-			len(sf.Chunks))
+			len(sf.Chunks.Chunks))
 	}
 
-	if sf.Chunks[0].Path != "" || sf.Chunks[0].File != nil {
+	if sf.Chunks.Chunks[0].Path != "" || sf.Chunks.Chunks[0].File != nil {
 		t.Errorf("expected chunk 0 to be in-memory")
 	}
 
-	for i := 1; i < len(sf.Chunks); i++ {
-		if sf.Chunks[i].Path == "" || sf.Chunks[i].File == nil {
+	for i := 1; i < len(sf.Chunks.Chunks); i++ {
+		if sf.Chunks.Chunks[i].Path == "" || sf.Chunks.Chunks[i].File == nil {
 			t.Errorf("expected rest chunk to be persisted")
 		}
 	}
 
-	if sf.LastChunkLen != 1 { // For key "a"
-		t.Errorf("expected LastChunkLen == 1, got: %d", sf.LastChunkLen)
+	if sf.Chunks.LastChunkLen != 1 { // For key "a"
+		t.Errorf("expected LastChunkLen == 1, got: %d",
+			sf.Chunks.LastChunkLen)
 	}
 
 	if sf.Generation != 0 {
