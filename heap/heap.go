@@ -88,7 +88,7 @@ func (h *Heap) Get(i int) ([]byte, error) {
 // Get returns the i'th item from the min-heap, along with its holding
 // area offset and holding area size in the data chunks.
 func (h *Heap) GetOffsetSize(i int) ([]byte, uint64, uint64, error) {
-	b, err := h.Heap.BytesRead(uint64(i * 16), 16)
+	b, err := h.Heap.BytesRead(uint64(i*16), 16)
 	if err != nil {
 		return nil, 0, 0, h.Error(err)
 	}
@@ -103,7 +103,7 @@ func (h *Heap) GetOffsetSize(i int) ([]byte, uint64, uint64, error) {
 
 	itemLen := binary.LittleEndian.Uint64(b[:8])
 
-	return b[8:8+itemLen], offset, size, nil
+	return b[8 : 8+itemLen], offset, size, nil
 }
 
 // ------------------------------------------------------
@@ -189,7 +189,7 @@ func (h *Heap) Push(x interface{}) {
 	// Push the item's offset+size into the heap.
 	if err == nil {
 		if h.CurItems < h.MaxItems {
-			b, err = h.Heap.BytesRead(uint64(h.CurItems * 16), 16)
+			b, err = h.Heap.BytesRead(uint64(h.CurItems*16), 16)
 			if err == nil {
 				binary.LittleEndian.PutUint64(b[:8], offset)
 				binary.LittleEndian.PutUint64(b[8:], size)

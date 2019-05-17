@@ -23,15 +23,15 @@ import (
 )
 
 func TestSize10x1x1(t *testing.T) {
-	test(t, 10, 1 * 16, 1 * 16)
+	test(t, 10, 1*16, 1*16)
 }
 
 func TestSize100x10x10(t *testing.T) {
-	test(t, 10, 10 * 16, 10 * 16)
+	test(t, 10, 10*16, 10*16)
 }
 
 func TestSize10000x1000x1000(t *testing.T) {
-	test(t, 10000, 1000 * 16, 1000 * 16)
+	test(t, 10000, 1000*16, 1000*16)
 }
 
 func test(t *testing.T, amount,
@@ -94,7 +94,7 @@ func test(t *testing.T, amount,
 			}
 
 			if h.Len() != n {
-				t.Fatalf("h.Len() %d != %d", h.Len(), i + 1)
+				t.Fatalf("h.Len() %d != %d", h.Len(), i+1)
 			}
 		}
 	}
