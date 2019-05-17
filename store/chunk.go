@@ -115,6 +115,7 @@ func (cs *Chunks) BytesAppend(b []byte) (
 
 // ---------------------------------------------
 
+// BytesRead returns a slice of data from the chunks.
 func (cs *Chunks) BytesRead(offset, size uint64) (
 	[]byte, error) {
 	if size > uint64(cs.ChunkSizeBytes) {
