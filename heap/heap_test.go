@@ -55,8 +55,7 @@ func test(t *testing.T, amount,
 	}
 
 	defer func() {
-		h.Heap.Close()
-		h.Data.Close()
+		h.Close()
 
 		os.RemoveAll(dir)
 	}()

@@ -64,6 +64,13 @@ type Heap struct {
 	Err error
 }
 
+func (h *Heap) Close() error {
+	h.Heap.Close()
+	h.Data.Close()
+
+	return nil
+}
+
 // Error records the first error encountered.
 func (h *Heap) Error(err error) error {
 	if h.Err == nil {
