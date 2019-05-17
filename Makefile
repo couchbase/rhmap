@@ -1,3 +1,6 @@
+default:
+	go test ./...
+
 generate-map_bytes_uint64:
 	mkdir -p ./map_bytes_uint64
 	cat rhmap.go | \

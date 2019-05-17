@@ -31,7 +31,9 @@ type BytesLessFunc func(a, b []byte) bool
 // Heap provides a min-heap using a given BytesLessFunc. When the
 // min-heap grows too large, it will automatically spill data to
 // temporary, mmap()'ed files based on the features from
-// rhmap/store/Chunks. The implementation is not concurrent safe.
+// rhmap/store/Chunks. The implementation is meant to be used with
+// golang's container/heap package. The implementation is not
+// concurrent safe. In memory operations try to avoid allocations.
 type Heap struct {
 	// LessFunc is used to compare two data items.
 	LessFunc BytesLessFunc
@@ -43,8 +45,7 @@ type Heap struct {
 	MaxItems int
 
 	// Heap is a min-heap of offset (uint64) and size (uint64) pairs,
-	// which point into the Data, and which are min-heap ordered based
-	// on the LessFunc. The store.Chunks of the Heap must be
+	// which point into the Data. The store.Chunks of the Heap must be
 	// configured with a ChunksSizeBytes that's a multiple of 16.
 	Heap *store.Chunks
 
@@ -52,7 +53,8 @@ type Heap struct {
 	// where each item is prefixed by its length as a uint64.
 	Data *store.Chunks
 
-	// Free represents unused but reusable slices in the Data.
+	// Free represents unused but reusable slices in the Data. The
+	// free list is appended to as items are popped from the heap.
 	Free []OffsetSize
 
 	// Temp is used during mutations.
@@ -96,6 +98,8 @@ func (h *Heap) GetOffsetSize(i int) ([]byte, uint64, uint64, error) {
 
 	return b[8:8+itemLen], offset, size, nil
 }
+
+// ------------------------------------------------------
 
 func (h *Heap) Len() int { return h.CurItems }
 
