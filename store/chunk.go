@@ -61,13 +61,14 @@ func (cs *Chunks) BytesTruncate(size uint64) error {
 
 	if len(cs.Chunks) > 0 {
 		// The truncate is to 0, so clear all the file-based chunks.
-		for i, chunk := range cs.Chunks[1:] {
+		for i := 1; i < len(cs.Chunks); i++ {
+			chunk := cs.Chunks[i]
 			chunk.Close() // TODO: Recycle chunk.
 			chunk.Remove()
 			cs.Chunks[i] = nil
 		}
-		cs.Chunks = cs.Chunks[:1] // Keep 0'th in-memory-only chunk.
 
+		cs.Chunks = cs.Chunks[:1] // Keep 0'th in-memory-only chunk.
 		// Special case the 0'th in-memory chunk.
 		cs.Chunks[0].Buf = cs.Chunks[0].Buf[:0]
 	}
