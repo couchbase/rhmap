@@ -32,6 +32,9 @@ type Chunks struct {
 	// the chunk that is still being appended to when there are new,
 	// incoming data items.
 	LastChunkLen int
+
+	// Recycled is a stack of chunks that are ready to reuse.
+	Recycled []*MMapRef
 }
 
 // ---------------------------------------------
@@ -60,15 +63,15 @@ func (cs *Chunks) BytesTruncate(size uint64) error {
 	}
 
 	if len(cs.Chunks) > 0 {
-		// The truncate is to 0, so clear all the file-based chunks.
-		for i := 1; i < len(cs.Chunks); i++ {
-			chunk := cs.Chunks[i]
-			chunk.Close() // TODO: Recycle chunk.
-			chunk.Remove()
+		// The truncate is to 0, so recycle all file-based chunks.
+		for i := len(cs.Chunks) - 1; i >= 1; i-- {
+			cs.Recycled = append(cs.Recycled, cs.Chunks[i])
+
 			cs.Chunks[i] = nil
 		}
 
 		cs.Chunks = cs.Chunks[:1] // Keep 0'th in-memory-only chunk.
+
 		// Special case the 0'th in-memory chunk.
 		cs.Chunks[0].Buf = cs.Chunks[0].Buf[:0]
 	}
@@ -139,14 +142,19 @@ func (cs *Chunks) BytesRead(offset, size uint64) (
 
 // Close releases resources used by the chunk files.
 func (cs *Chunks) Close() error {
-	for i, chunk := range cs.Chunks {
+	for _, chunk := range cs.Chunks {
 		chunk.Close()
 		chunk.Remove()
-		cs.Chunks[i] = nil
 	}
 	cs.Chunks = nil
 
 	cs.LastChunkLen = 0
+
+	for _, chunk := range cs.Recycled {
+		chunk.Close()
+		chunk.Remove()
+	}
+	cs.Recycled = nil
 
 	return nil
 }
@@ -155,18 +163,26 @@ func (cs *Chunks) Close() error {
 
 // AddChunk appends a new chunk file to the chunks.
 func (cs *Chunks) AddChunk() (err error) {
-	var chunkPath string
-	var chunkSizeBytes int
+	var chunk *MMapRef
 
-	if len(cs.Chunks) > 0 {
-		chunkPath = fmt.Sprintf("%s_chunk_%09d%s",
-			cs.PathPrefix, len(cs.Chunks), cs.FileSuffix)
-		chunkSizeBytes = cs.ChunkSizeBytes
-	}
+	if len(cs.Recycled) <= 0 {
+		var chunkPath string
+		var chunkSizeBytes int
 
-	chunk, err := CreateFileAsMMapRef(chunkPath, chunkSizeBytes)
-	if err != nil {
-		return err
+		if len(cs.Chunks) > 0 {
+			chunkPath = fmt.Sprintf("%s_chunk_%09d%s",
+				cs.PathPrefix, len(cs.Chunks), cs.FileSuffix)
+			chunkSizeBytes = cs.ChunkSizeBytes
+		}
+
+		chunk, err = CreateFileAsMMapRef(chunkPath, chunkSizeBytes)
+		if err != nil {
+			return err
+		}
+	} else {
+		chunk = cs.Recycled[len(cs.Recycled)-1]
+		cs.Recycled[len(cs.Recycled)-1] = nil
+		cs.Recycled = cs.Recycled[:len(cs.Recycled)-1]
 	}
 
 	cs.Chunks = append(cs.Chunks, chunk)
