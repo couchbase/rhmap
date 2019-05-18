@@ -106,6 +106,18 @@ func (h *Heap) GetOffsetSize(i int) ([]byte, uint64, uint64, error) {
 	return b[8 : 8+itemLen], offset, size, nil
 }
 
+func (h *Heap) SetOffsetSize(i int, offset, size uint64) error {
+	b, err := h.Heap.BytesRead(uint64(i*16), 16)
+	if err != nil {
+		return err
+	}
+
+	binary.LittleEndian.PutUint64(b[:8], offset)
+	binary.LittleEndian.PutUint64(b[8:], size)
+
+	return nil
+}
+
 // ------------------------------------------------------
 
 func (h *Heap) Len() int { return h.CurItems }
@@ -189,11 +201,7 @@ func (h *Heap) Push(x interface{}) {
 	// Push the item's offset+size into the heap.
 	if err == nil {
 		if h.CurItems < h.MaxItems {
-			b, err = h.Heap.BytesRead(uint64(h.CurItems*16), 16)
-			if err == nil {
-				binary.LittleEndian.PutUint64(b[:8], offset)
-				binary.LittleEndian.PutUint64(b[8:], size)
-			}
+			h.SetOffsetSize(h.CurItems, offset, size)
 		} else {
 			binary.LittleEndian.PutUint64(buf[:8], offset)
 			binary.LittleEndian.PutUint64(buf[8:], size)
