@@ -161,7 +161,8 @@ func (cs *Chunks) Close() error {
 
 // ---------------------------------------------
 
-// AddChunk appends a new chunk file to the chunks.
+// AddChunk appends a new chunk file to the chunks, or reuses a
+// previously recycled chunk file.
 func (cs *Chunks) AddChunk() (err error) {
 	var chunk *MMapRef
 
