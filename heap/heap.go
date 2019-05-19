@@ -33,7 +33,8 @@ type BytesLessFunc func(a, b []byte) bool
 // temporary, mmap()'ed files based on the features from
 // rhmap/store/Chunks. The implementation is meant to be used with
 // golang's container/heap package. The implementation is not
-// concurrent safe. In memory operations try to avoid allocations.
+// concurrent safe. The implementation is designed to avoid
+// allocations and reuse existing []byte buffers when possible.
 type Heap struct {
 	// LessFunc is used to compare two data items.
 	LessFunc BytesLessFunc
@@ -175,6 +176,9 @@ func (h *Heap) Push(x interface{}) {
 	var err error
 
 	for i, offsetSize := range h.Free {
+		// NOTE: This simple, greedy approach of taking the first free
+		// entry where the incoming bytes will fit can lead to
+		// inefficient chunk usage for some application data patterns.
 		if offsetSize.Size >= uint64(len(h.Temp)) {
 			offset, size = offsetSize.Offset, offsetSize.Size
 			found = true
