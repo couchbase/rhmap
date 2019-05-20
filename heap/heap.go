@@ -35,6 +35,10 @@ type BytesLessFunc func(a, b []byte) bool
 // golang's container/heap package. The implementation is not
 // concurrent safe. The implementation is designed to avoid
 // allocations and reuse existing []byte buffers when possible.
+//
+// The heap can also be used directly with the PushBytes() API without
+// using golang's container/heap package, in which case this data
+// structure behaves as a appendable sequence of []byte entries.
 type Heap struct {
 	// LessFunc is used to compare two data items.
 	LessFunc BytesLessFunc
@@ -46,7 +50,7 @@ type Heap struct {
 	MaxItems int
 
 	// Heap is a min-heap of offset (uint64) and size (uint64) pairs,
-	// which point into the Data. The store.Chunks of the Heap must be
+	// which refer into the Data. The store.Chunks of the Heap must be
 	// configured with a ChunksSizeBytes that's a multiple of 16.
 	Heap *store.Chunks
 
@@ -68,6 +72,20 @@ type Heap struct {
 func (h *Heap) Close() error {
 	h.Heap.Close()
 	h.Data.Close()
+
+	return nil
+}
+
+func (h *Heap) Reset() error {
+	h.CurItems = 0
+	h.MaxItems = 0
+
+	h.Heap.BytesTruncate(0)
+	h.Data.BytesTruncate(0)
+
+	h.Free = h.Free[:0]
+
+	h.Err = nil
 
 	return nil
 }
