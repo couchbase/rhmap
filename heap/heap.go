@@ -17,6 +17,8 @@ package heap
 import (
 	"encoding/binary"
 
+	cheap "container/heap"
+
 	"github.com/couchbase/rhmap/store"
 )
 
@@ -261,4 +263,34 @@ func (h *Heap) Pop() interface{} {
 	h.Free = append(h.Free, OffsetSize{offset, size})
 
 	return rv
+}
+
+// ------------------------------------------------------
+
+// Sort pops items off the heap and places them at the end of the heap
+// slots in reverse order, leaving sorted items at the end of the heap
+// slots. This approach does not allocate additional space. If there
+// are n items in the heap, then n-offset items will be left sorted at
+// the end of the heap slots. An offset of 0 sorts the entire heap.
+func (h *Heap) Sort(offset int) error {
+	for i := h.Len() - 1; i >= offset; i-- {
+		_, offset, size, err := h.GetOffsetSize(0)
+		if err != nil {
+			return h.Error(err)
+		}
+
+		cheap.Pop(h)
+		if h.Err != nil {
+			return h.Err
+		}
+
+		h.Free = h.Free[:0]
+
+		err = h.SetOffsetSize(i, offset, size)
+		if err != nil {
+			return h.Error(err)
+		}
+	}
+
+	return nil
 }
