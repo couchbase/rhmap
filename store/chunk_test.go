@@ -42,7 +42,7 @@ func BenchmarkChunkTruncate(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
-			if offset != uint64(i * len(buf)) ||
+			if offset != uint64(i*len(buf)) ||
 				size != uint64(len(buf)) {
 				b.Fatalf("wrong offset/size")
 			}
@@ -60,10 +60,9 @@ func BenchmarkChunkTruncate(b *testing.B) {
 
 	appendStuff()
 
-    b.ResetTimer()
+	b.ResetTimer()
 
-    for i := 0; i < b.N; i++ {
+	for i := 0; i < b.N; i++ {
 		appendStuff()
-    }
+	}
 }
-

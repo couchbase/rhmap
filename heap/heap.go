@@ -159,12 +159,13 @@ func (h *Heap) Less(i, j int) bool {
 
 // Push will error if the incoming "data length + 8" is greater than
 // the configured ChunkSizeBytes of the heap's data chunks.
-func (h *Heap) Push(x interface{}) {
+func (h *Heap) Push(x interface{}) { h.PushBytes(x.([]byte)) }
+
+// PushBytes is more direct than Push, avoiding interface{} casting.
+func (h *Heap) PushBytes(xbytes []byte) error {
 	var buf [16]byte
 
 	// Prepend prefix of uint64 length.
-	xbytes := x.([]byte)
-
 	binary.LittleEndian.PutUint64(buf[:8], uint64(len(xbytes)))
 
 	h.Temp = append(h.Temp[:0], buf[:8]...)
@@ -215,8 +216,7 @@ func (h *Heap) Push(x interface{}) {
 	}
 
 	if err != nil {
-		h.Error(err)
-		return
+		return h.Error(err)
 	}
 
 	h.CurItems++
@@ -224,6 +224,8 @@ func (h *Heap) Push(x interface{}) {
 	if h.MaxItems < h.CurItems {
 		h.MaxItems = h.CurItems
 	}
+
+	return nil
 }
 
 func (h *Heap) Pop() interface{} {
