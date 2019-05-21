@@ -67,6 +67,9 @@ type Heap struct {
 	// Temp is used during mutations.
 	Temp []byte
 
+	// Extra is application specific data associated with this heap.
+	Extra interface{}
+
 	// Err tracks the first error encountered.
 	Err error
 }
