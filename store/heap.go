@@ -9,17 +9,12 @@
 //  express or implied. See the License for the specific language
 //  governing permissions and limitations under the License.
 
-// Package heap provides a min-heap data structure of []byte items
-// that can automatically spill out to temporary files when the heap
-// becomes large.
-package heap
+package store
 
 import (
 	"encoding/binary"
 
-	cheap "container/heap"
-
-	"github.com/couchbase/rhmap/store"
+	heap "container/heap"
 )
 
 // OffsetSize associates an offset with a size.
@@ -52,13 +47,13 @@ type Heap struct {
 	MaxItems int
 
 	// Heap is a min-heap of offset (uint64) and size (uint64) pairs,
-	// which refer into the Data. The store.Chunks of the Heap must be
+	// which refer into the Data. The Chunks of the Heap must be
 	// configured with a ChunksSizeBytes that's a multiple of 16.
-	Heap *store.Chunks
+	Heap *Chunks
 
 	// Data represents the application data items held in chunks,
 	// where each item is prefixed by its length as a uint64.
-	Data *store.Chunks
+	Data *Chunks
 
 	// Free represents unused but reusable slices in the Data. The
 	// free list is appended to as items are popped from the heap.
@@ -282,7 +277,7 @@ func (h *Heap) Sort(offset int) error {
 			return h.Error(err)
 		}
 
-		cheap.Pop(h)
+		heap.Pop(h)
 		if h.Err != nil {
 			return h.Err
 		}

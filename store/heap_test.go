@@ -9,32 +9,30 @@
 //  express or implied. See the License for the specific language
 //  governing permissions and limitations under the License.
 
-package heap
+package store
 
 import (
 	"bytes"
-	cheap "container/heap"
+	"container/heap"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
-
-	"github.com/couchbase/rhmap/store"
 )
 
 func TestSize10x1x1(t *testing.T) {
-	test(t, 10, 1*16, 1*16)
+	testHeap(t, 10, 1*16, 1*16)
 }
 
 func TestSize100x10x10(t *testing.T) {
-	test(t, 10, 10*16, 10*16)
+	testHeap(t, 10, 10*16, 10*16)
 }
 
 func TestSize10000x1000x1000(t *testing.T) {
-	test(t, 10000, 1000*16, 1000*16)
+	testHeap(t, 10000, 1000*16, 1000*16)
 }
 
-func test(t *testing.T, amount,
+func testHeap(t *testing.T, amount,
 	heapChunkSizeBytes, dataChunkSizeBytes int) {
 	dir, _ := ioutil.TempDir("", "testHeap")
 
@@ -42,12 +40,12 @@ func test(t *testing.T, amount,
 		LessFunc: func(a, b []byte) bool {
 			return bytes.Compare(a, b) < 0
 		},
-		Heap: &store.Chunks{
+		Heap: &Chunks{
 			PathPrefix:     dir,
 			FileSuffix:     ".heap",
 			ChunkSizeBytes: heapChunkSizeBytes,
 		},
-		Data: &store.Chunks{
+		Data: &Chunks{
 			PathPrefix:     dir,
 			FileSuffix:     ".data",
 			ChunkSizeBytes: dataChunkSizeBytes,
@@ -73,7 +71,7 @@ func test(t *testing.T, amount,
 				min = istr
 			}
 
-			cheap.Push(h, iv)
+			heap.Push(h, iv)
 			n++
 
 			if h.Err != nil {
@@ -101,7 +99,7 @@ func test(t *testing.T, amount,
 
 	popAll := func() {
 		for h.Len() > 0 {
-			top := cheap.Pop(h).([]byte)
+			top := heap.Pop(h).([]byte)
 
 			if h.Err != nil {
 				t.Fatalf("h.Err on pop: %v", h.Err)
