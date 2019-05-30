@@ -41,10 +41,10 @@ type Heap struct {
 	LessFunc BytesLessFunc
 
 	// CurItems holds the # of current, live items on the heap.
-	CurItems int
+	CurItems int64
 
 	// MaxItems holds the maximum # of items the heap has ever held.
-	MaxItems int
+	MaxItems int64
 
 	// Heap is a min-heap of offset (uint64) and size (uint64) pairs,
 	// which refer into the Data. The Chunks of the Heap must be
@@ -99,14 +99,14 @@ func (h *Heap) Error(err error) error {
 }
 
 // Get returns the i'th item from the min-heap.
-func (h *Heap) Get(i int) ([]byte, error) {
+func (h *Heap) Get(i int64) ([]byte, error) {
 	rv, _, _, err := h.GetOffsetSize(i)
 	return rv, err
 }
 
 // Get returns the i'th item from the min-heap, along with its holding
 // area offset and holding area size in the data chunks.
-func (h *Heap) GetOffsetSize(i int) ([]byte, uint64, uint64, error) {
+func (h *Heap) GetOffsetSize(i int64) ([]byte, uint64, uint64, error) {
 	b, err := h.Heap.BytesRead(uint64(i*16), 16)
 	if err != nil {
 		return nil, 0, 0, h.Error(err)
@@ -125,7 +125,7 @@ func (h *Heap) GetOffsetSize(i int) ([]byte, uint64, uint64, error) {
 	return b[8 : 8+itemLen], offset, size, nil
 }
 
-func (h *Heap) SetOffsetSize(i int, offset, size uint64) error {
+func (h *Heap) SetOffsetSize(i int64, offset, size uint64) error {
 	b, err := h.Heap.BytesRead(uint64(i*16), 16)
 	if err != nil {
 		return err
@@ -139,7 +139,7 @@ func (h *Heap) SetOffsetSize(i int, offset, size uint64) error {
 
 // ------------------------------------------------------
 
-func (h *Heap) Len() int { return h.CurItems }
+func (h *Heap) Len() int { return int(h.CurItems) }
 
 func (h *Heap) Swap(i, j int) {
 	ibuf, err := h.Heap.BytesRead(uint64(i*16), 16)
@@ -162,12 +162,12 @@ func (h *Heap) Swap(i, j int) {
 }
 
 func (h *Heap) Less(i, j int) bool {
-	iv, err := h.Get(i)
+	iv, err := h.Get(int64(i))
 	if err != nil {
 		return false
 	}
 
-	jv, err := h.Get(j)
+	jv, err := h.Get(int64(j))
 	if err != nil {
 		return false
 	}
@@ -270,8 +270,8 @@ func (h *Heap) Pop() interface{} {
 // slots. This approach does not allocate additional space. If there
 // are n items in the heap, then n-offset items will be left sorted at
 // the end of the heap slots. An offset of 0 sorts the entire heap.
-func (h *Heap) Sort(offset int) error {
-	for i := h.Len() - 1; i >= offset; i-- {
+func (h *Heap) Sort(offset int64) error {
+	for i := h.CurItems - 1; i >= offset; i-- {
 		_, offset, size, err := h.GetOffsetSize(0)
 		if err != nil {
 			return h.Error(err)
