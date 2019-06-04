@@ -60,8 +60,8 @@ type Item struct {
 	Distance int // How far item is from its best position.
 }
 
-// NewRHMap returns a new robinhood hashmap.
-func NewRHMap(size int) *RHMap {
+// New returns a new robinhood hashmap.
+func New(size int) *RHMap {
 	h := fnv.New32a()
 
 	return &RHMap{
@@ -257,7 +257,7 @@ func (m *RHMap) Visit(callback func(k Key, v Val) (keepGoing bool)) {
 
 // Grow is the default implementation to grow a RHMap.
 func Grow(m *RHMap, newSize int) {
-	grow := NewRHMap(newSize)
+	grow := New(newSize)
 	grow.HashFunc = m.HashFunc
 	grow.MaxDistance = m.MaxDistance
 	grow.Growth = m.Growth

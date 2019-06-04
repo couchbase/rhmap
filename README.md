@@ -8,7 +8,7 @@ In other words: `map[[]byte][]byte` or `map[[]byte]SomeOtherType`
 ```go
     var size = 97 // Ideally, some prime number.
 
-    m := rhmap.NewRHMap(size)
+    m := rhmap.New(size)
 
     wasNew, err := m.Set([]byte("hi"), []byte("world"))
     // wasNew == true

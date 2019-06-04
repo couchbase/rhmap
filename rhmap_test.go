@@ -18,7 +18,7 @@ import (
 )
 
 func TestSize1(t *testing.T) {
-	r := NewRHMap(1)
+	r := New(1)
 	test(t, r, true, nil)
 	r.Reset()
 	test(t, r, true, nil)
@@ -42,21 +42,21 @@ func TestSize1(t *testing.T) {
 }
 
 func TestSize2(t *testing.T) {
-	r := NewRHMap(2)
+	r := New(2)
 	test(t, r, true, nil)
 	r.Reset()
 	test(t, r, true, nil)
 }
 
 func TestSize10(t *testing.T) {
-	r := NewRHMap(10)
+	r := New(10)
 	test(t, r, true, nil)
 	r.Reset()
 	test(t, r, true, nil)
 }
 
 func TestSize18NonGrowing(t *testing.T) {
-	r := NewRHMap(18)
+	r := New(18)
 	r.MaxDistance = 100000
 
 	test(t, r, false, nil)
@@ -231,7 +231,7 @@ func test(t *testing.T, r *RHMap,
 			return
 		}
 
-		r2 := NewRHMap(1)
+		r2 := New(1)
 		r2.MaxDistance = 1
 		r.CopyTo(r2)
 
