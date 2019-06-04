@@ -40,6 +40,8 @@ In other words: `map[[]byte][]byte` or `map[[]byte]SomeOtherType`
 * `Reset()` method allows an RHMap to be efficiently cleared, and the
   underlying, already allocated memory will be recycled for reuse,
   which can reduce garbage memory pressure for some applications.
+* The `store` subpackage provides map and heap implementations that
+  can optionally spill out to files when memory usage grows too large.
 
 ## Motivations
 
