@@ -14,7 +14,7 @@ package store
 import (
 	"encoding/binary"
 
-	heap "container/heap"
+	"container/heap"
 )
 
 // OffsetSize associates an offset with a size.
