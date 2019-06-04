@@ -1,13 +1,26 @@
-RHStore is a hashmap that uses the robinhood algorithm.
+# store - persisted data structures
 
-Unlike an RHMap, the key/val bytes placed into an RHStore are owned or
-managed by the RHStore.
+The data structures provided by the store package are intended to
+avoid memory allocations whenever possible, at the potential tradeoff
+in ease-of-use of the API's.
 
-RHStore also has more hook-points or callback API's than an RHMap, as
-RHStore is intended for advanced users who might use the hook-points
-to build a persistent data structure (i.e., spill data out to disk).
+When memory usage grows too large, these data structures are designed
+to spill to mmap()'ed files.
 
-The RHStore's internal data structures are also more "flat" than an
-RHMap's, allowing for easier persistence than when using an RHMap.
-For example, the slots in an RHMap are []Item struct's, whereas the
-slots in an RHStore are []uint64's.
+These data structures are intended for ephemeral data processing,
+where data spilled to files, for example, are considered
+temporary. Long term persistence concerns like versioning, atomic
+writes, crash recovery, etc, are not part of these implementations.
+
+## RHStore - a persisted hashmap that uses the robinhood algorithm
+
+Unlike an rhmap.RHMap, the key/val bytes placed into an RHStore are
+owned or managed by the RHStore.
+
+## Heap - a min-heap that can spill out to files
+
+This can be useful for sorting and "OFFSET/LIMIT" processing.
+
+## Chunks - tracks sequence of persisted chunk files
+
+Each chunk file is the same physical size (e.g., 4MB).
