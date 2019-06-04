@@ -12,15 +12,20 @@ where data spilled to files, for example, are considered
 temporary. Long term persistence concerns like versioning, atomic
 writes, crash recovery, etc, are not part of these implementations.
 
-## RHStore - a persisted hashmap that uses the robinhood algorithm
+## RHStore
+
+RHStore is a persisted hashmap that uses the robinhood algorithm.
 
 Unlike an rhmap.RHMap, the key/val bytes placed into an RHStore are
 owned or managed by the RHStore.
 
-## Heap - a min-heap that can spill out to files
+## Heap
 
-This can be useful for sorting and "OFFSET/LIMIT" processing.
+Heap is a min-heap that can spill out to files, which works in
+conjunction with golang's container/heap package. It can be useful for
+sorting and "OFFSET/LIMIT" processing.
 
-## Chunks - tracks sequence of persisted chunk files
+## Chunks
 
-Each chunk file is the same physical size (e.g., 4MB).
+Chunks represents an "append-only" sequence of persisted chunk files,
+where each chunk file has the same physical size (e.g., 4MB).
