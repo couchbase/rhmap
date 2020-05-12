@@ -19,4 +19,4 @@ package store
 //
 // See: https://social.msdn.microsoft.com/Forums/vstudio/en-US/972f36a4-26c9-466b-861a-5f40fa4cf4e7/about-the-dwallocationgranularity?forum=vclanguage
 //
-var MMapPageGranularity = 65536 // 64kiB.
+var MMapPageGranularity = int64(65536) // 64kiB.
