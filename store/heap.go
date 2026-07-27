@@ -63,7 +63,7 @@ type Heap struct {
 	Temp []byte
 
 	// Extra is application specific data associated with this heap.
-	Extra interface{}
+	Extra any
 
 	// Err tracks the first error encountered.
 	Err error
@@ -193,9 +193,9 @@ func (h *Heap) Less(i, j int) bool {
 
 // Push will error if the incoming "data length + 8" is greater than
 // the configured ChunkSizeBytes of the heap's data chunks.
-func (h *Heap) Push(x interface{}) { h.PushBytes(x.([]byte)) }
+func (h *Heap) Push(x any) { h.PushBytes(x.([]byte)) }
 
-// PushBytes is more direct than Push, avoiding interface{} casting.
+// PushBytes is more direct than Push, avoiding the any conversion.
 func (h *Heap) PushBytes(xbytes []byte) error {
 	var buf [16]byte
 
@@ -262,7 +262,7 @@ func (h *Heap) PushBytes(xbytes []byte) error {
 	return nil
 }
 
-func (h *Heap) Pop() interface{} {
+func (h *Heap) Pop() any {
 	rv, offset, size, err := h.GetOffsetSize(h.CurItems - 1)
 	if err != nil {
 		h.Error(err)

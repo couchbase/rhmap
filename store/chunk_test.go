@@ -13,13 +13,12 @@ package store
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 )
 
 func BenchmarkChunkTruncate(b *testing.B) {
-	dir, _ := ioutil.TempDir("", "testChunk")
+	dir, _ := os.MkdirTemp("", "testChunk")
 	defer os.RemoveAll(dir)
 
 	chunkSizeBytes := 8 * 1024

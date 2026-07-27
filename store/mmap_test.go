@@ -12,7 +12,6 @@
 package store
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -20,7 +19,7 @@ import (
 )
 
 func TestMultipleMMapsOnSameFile(t *testing.T) {
-	tmpDir, _ := ioutil.TempDir("", "storeMMap")
+	tmpDir, _ := os.MkdirTemp("", "storeMMap")
 	defer os.RemoveAll(tmpDir)
 
 	f, err := os.Create(tmpDir + string(os.PathSeparator) + "test.file")

@@ -90,7 +90,7 @@ type RHStore struct {
 
 	// Extra is for optional data that the application wants to
 	// associate with the RHStore instance.
-	Extra interface{}
+	Extra any
 
 	Close func() error
 
@@ -103,10 +103,10 @@ type RHStore struct {
 // Item represents an entry in the RHStore, where each item uses 3
 // contiguous slots (uint64's) for encoding...
 //
-//           MSB....................................................LSB
-// uint64 0: [64-bits keyOffset                                       ]
-// uint64 1: [64-bits valOffset                                       ]
-// uint64 2: [14-bits distance] | [25 bits valSize] | [25 bits keySize]
+//	          MSB....................................................LSB
+//	uint64 0: [64-bits keyOffset                                       ]
+//	uint64 1: [64-bits valOffset                                       ]
+//	uint64 2: [14-bits distance] | [25 bits valSize] | [25 bits keySize]
 //
 // The len(Item) == 3 (i.e., 3 uint64's).  The key/val offsets are
 // into the RHStore's backing bytes.

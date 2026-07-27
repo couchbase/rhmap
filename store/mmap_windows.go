@@ -9,6 +9,7 @@
 //  express or implied. See the License for the specific language
 //  governing permissions and limitations under the License.
 
+//go:build windows
 // +build windows
 
 package store
@@ -18,5 +19,4 @@ package store
 // which is up to 64kiB (or, larger than the usual 4KB page size).
 //
 // See: https://social.msdn.microsoft.com/Forums/vstudio/en-US/972f36a4-26c9-466b-861a-5f40fa4cf4e7/about-the-dwallocationgranularity?forum=vclanguage
-//
 var MMapPageGranularity = int64(65536) // 64kiB.

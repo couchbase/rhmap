@@ -14,7 +14,6 @@ package store
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -394,7 +393,7 @@ func TestRHStoreFileSize10(t *testing.T) {
 }
 
 func testRHStoreFile(t *testing.T, options RHStoreFileOptions) {
-	dir, _ := ioutil.TempDir("", "testRHStoreFile")
+	dir, _ := os.MkdirTemp("", "testRHStoreFile")
 	defer os.RemoveAll(dir)
 
 	sf, err := CreateRHStoreFile(dir, options)
@@ -416,7 +415,7 @@ func TestRHStoreFileSize18NonGrowing(t *testing.T) {
 	options.StartSize = 18
 	options.MaxDistance = 100000
 
-	dir, _ := ioutil.TempDir("", "testRHStoreFile")
+	dir, _ := os.MkdirTemp("", "testRHStoreFile")
 	defer os.RemoveAll(dir)
 
 	sf, err := CreateRHStoreFile(dir, options)
@@ -432,7 +431,7 @@ func TestRHStoreFileSize18NonGrowing(t *testing.T) {
 }
 
 func TestRHStoreFileBigKeyVal(t *testing.T) {
-	dir, _ := ioutil.TempDir("", "testRHStoreFile")
+	dir, _ := os.MkdirTemp("", "testRHStoreFile")
 	defer os.RemoveAll(dir)
 
 	options := DefaultRHStoreFileOptions

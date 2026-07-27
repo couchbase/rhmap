@@ -15,7 +15,6 @@ import (
 	"bytes"
 	"container/heap"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -34,7 +33,7 @@ func TestSize10000x1000x1000(t *testing.T) {
 
 func testHeap(t *testing.T, amount,
 	heapChunkSizeBytes, dataChunkSizeBytes int) {
-	dir, _ := ioutil.TempDir("", "testHeap")
+	dir, _ := os.MkdirTemp("", "testHeap")
 
 	h := &Heap{
 		LessFunc: func(a, b []byte) bool {
