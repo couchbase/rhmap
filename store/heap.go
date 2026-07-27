@@ -13,8 +13,6 @@ package store
 
 import (
 	"encoding/binary"
-
-	"container/heap"
 )
 
 // OffsetSize associates an offset with a size.
@@ -37,7 +35,9 @@ type BytesLessFunc func(a, b []byte) bool
 // using golang's container/heap package, in which case this data
 // structure behaves as a appendable sequence of []byte entries.
 type Heap struct {
-	// LessFunc is used to compare two data items.
+	// LessFunc is used to compare two data items. It must be safe for
+	// concurrent use when SortChunked() is used with more than one
+	// worker goroutine.
 	LessFunc BytesLessFunc
 
 	// CurItems holds the # of current, live items on the heap.
@@ -67,11 +67,23 @@ type Heap struct {
 
 	// Err tracks the first error encountered.
 	Err error
+
+	// The sortXxxx fields are reusable scratch space for the sorting
+	// implementations -- see heap_sort.go.
+	sortRuns    []recordRun
+	sortCursors []mergeCursor
+	sortBuf     []byte
+	sortScratch *Chunks
 }
 
 func (h *Heap) Close() error {
 	h.Heap.Close()
 	h.Data.Close()
+
+	if h.sortScratch != nil {
+		h.sortScratch.Close()
+		h.sortScratch = nil
+	}
 
 	return nil
 }
@@ -82,6 +94,10 @@ func (h *Heap) Reset() error {
 
 	h.Heap.BytesTruncate(0)
 	h.Data.BytesTruncate(0)
+
+	if h.sortScratch != nil {
+		h.sortScratch.BytesTruncate(0)
+	}
 
 	h.Free = h.Free[:0]
 
@@ -265,30 +281,19 @@ func (h *Heap) Pop() interface{} {
 
 // ------------------------------------------------------
 
-// Sort pops items off the heap and places them at the end of the heap
-// slots in reverse order, leaving sorted items at the end of the heap
-// slots. This approach does not allocate additional space. If there
-// are n items in the heap, then n-offset items will be left sorted at
-// the end of the heap slots. An offset of 0 sorts the entire heap.
+// Sort leaves the last n-offset items of the heap slots in sorted
+// order, where n is the number of items in the heap, so that the min
+// item ends up in the last slot. An offset of 0 sorts the entire
+// heap. The heap's live length becomes offset, and the leading offset
+// slots are left as a valid min-heap of the items that were not
+// sorted.
+//
+// Sort uses the sorting implementation that needs no additional space
+// and that calls LessFunc from only one goroutine -- see
+// SortInPlace(). Callers that can spare roughly 16 bytes per item of
+// spillable scratch space, and whose LessFunc is safe for concurrent
+// use, can instead use SortChunked(), which measures 2x-4x faster on
+// large heaps -- see store/README.md.
 func (h *Heap) Sort(offset int64) error {
-	for i := h.CurItems - 1; i >= offset; i-- {
-		_, offset, size, err := h.GetOffsetSize(0)
-		if err != nil {
-			return h.Error(err)
-		}
-
-		heap.Pop(h)
-		if h.Err != nil {
-			return h.Err
-		}
-
-		h.Free = h.Free[:0]
-
-		err = h.SetOffsetSize(i, offset, size)
-		if err != nil {
-			return h.Error(err)
-		}
-	}
-
-	return nil
+	return h.SortInPlace(offset)
 }
